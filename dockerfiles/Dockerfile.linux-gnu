@@ -1,0 +1,97 @@
+FROM debian:12.4
+
+ARG POSTGRESQL_VERSION
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bison \
+        build-essential \
+        clang-16 \
+        flex \
+        fop \
+        gettext \
+        git \
+        libicu-dev \
+        libkrb5-dev \
+        libldap-dev \
+        liblz4-dev \
+        libossp-uuid-dev \
+        libperl-dev \
+        libreadline-dev \
+        libssl-dev \
+        libxml2-dev \
+    	libxml2-utils \
+        libxslt-dev \
+        libz-dev \
+        libzstd-dev \
+        llvm-16 \
+        lz4 \
+        make \
+        meson \
+        ninja-build \
+        openssl \
+        patchelf \
+        perl \
+        pkg-config \
+        python3 \
+        python3-dev \
+        tcl \
+        tcl-dev \
+        wget \
+        xsltproc \
+        zstd
+
+RUN branch=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print "REL_"$1"_"$2}') && \
+    echo "branch=$branch" && \
+    git config --global http.version HTTP/1.1 && \
+    git config --global http.sslVerify false && \
+    for i in $(seq 1 5); do \
+        git clone --depth 1 --branch $branch -c advice.detachedHead=false https://git.postgresql.org/git/postgresql.git /usr/src/postgresql \
+            && break || sleep 3; \
+    done
+
+WORKDIR /usr/src/postgresql
+
+ENV CLANG=clang-16
+ENV LLVM_CONFIG="/usr/lib/llvm-16/bin/llvm-config"
+
+RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
+    ./configure \
+      --prefix /opt/postgresql \
+      --enable-integer-datetimes \
+      --enable-option-checking=fatal \
+      --enable-thread-safety \
+      --with-gssapi \
+      $([ $major_version -ge 14 ] && echo "--with-icu" || echo "--without-icu") \
+      $([ $major_version -ge 11 ] && echo "--with-ldap") \
+      --with-libxml \
+      --with-libxslt \
+      $([ $major_version -ge 14 ] && echo "--with-lz4") \
+      --with-openssl \
+      --with-perl \
+      --with-pgport=5432 \
+      $([ $major_version -ge 15 ] && echo "--with-python") \
+      --with-readline \
+      --with-system-tzdata=/usr/share/zoneinfo \
+      --with-tcl \
+      --with-uuid=ossp \
+      $([ $major_version -ge 16 ] && echo "--with-zstd") && \
+    make $([ $major_version -ge 15 ] && echo "world-bin") && \
+    make $([ $major_version -ge 15 ] && echo "install-world-bin" || echo "install") && \
+    make -C contrib install
+
+# Update binary rpath to use a relative path.
+# LD_FLAGS=-Wl,-rpath,'$ORIGIN/../lib' should be used instead, but does not appear to work.
+RUN cd /opt/postgresql/bin && \
+    rpath=$(patchelf --print-rpath postgres | sed 's|/opt/postgresql/lib|$ORIGIN/../lib|g') && \
+    find ./ -type f | xargs -L 1 patchelf --set-rpath $rpath
+
+RUN cp /usr/src/postgresql/COPYRIGHT /opt/postgresql
+
+# Create user and group for running tests
+RUN groupadd --system --gid 1000 postgresql && \
+    useradd --system --gid postgresql --uid 1000 --shell /bin/bash --create-home postgresql && \
+    mkdir -p /opt/test && \
+    chown postgresql:postgresql /opt/test
+
+USER postgresql
