@@ -501,4 +501,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$VERSION" ${{ env.WINDOWS_ASSET }} ${{ env.WINDOWS_ASSET_SUM }}
-
