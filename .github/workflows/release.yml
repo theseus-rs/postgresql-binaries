@@ -54,4 +54,3 @@ jobs:
         run: gh release edit "${VERSION}" --draft=false
     outputs:
       version: ${{ env.VERSION }}
-
