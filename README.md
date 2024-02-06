@@ -16,7 +16,7 @@ extension.  To find the `<target>` triple for your platform run `rustc -vV` and 
 
 ## Versioning
 
-This project uses a versioning scheme that is compatible with [postgresql versioning](https://www.postgresql.org/support/versioning/).
+This project uses a versioning scheme that is compatible with [PostgreSQL versioning](https://www.postgresql.org/support/versioning/).
 The version comprises `<postgres major>.<postgres minor>.<release>`, where `<release>` is the release for
 this project's build of a version of PostgreSQL.  New releases of this project will be made when new versions
 of PostgreSQL are released or new builds of existing versions are required for bug fixes, new targets, etc.

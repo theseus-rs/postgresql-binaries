@@ -177,12 +177,12 @@ jobs:
           # Update to use macos-latest-large when available: https://github.com/github/roadmap/issues/819
           - id: macos-arm64
             target: aarch64-apple-darwin
-            os: self-hosted
+            os: macos-14
             architecture: "arm64"
 
           - id: macos-x64
             target: x86_64-apple-darwin
-            os: macos-latest
+            os: macos-13
             architecture: "x86_64"
 
           #
