@@ -62,7 +62,7 @@ RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
       --enable-option-checking=fatal \
       --enable-thread-safety \
       --with-gssapi \
-      $([ $major_version -ge 14 ] && echo "--with-icu" || echo "--without-icu") \
+      --without-icu \
       $([ $major_version -ge 11 ] && echo "--with-ldap") \
       --with-libxml \
       --with-libxslt \
