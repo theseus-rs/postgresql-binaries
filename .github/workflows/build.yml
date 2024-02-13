@@ -174,7 +174,6 @@ jobs:
           # MacOS
           #
 
-          # Update to use macos-latest-large when available: https://github.com/github/roadmap/issues/819
           - id: macos-arm64
             target: aarch64-apple-darwin
             os: macos-14
@@ -210,7 +209,7 @@ jobs:
 
           if [ -z "$version" ]; then
             # Set default version for non-release builds
-            version="16.1.0"
+            version="16.2.0"
           fi
 
           root_directory="$(pwd)"
@@ -332,69 +331,18 @@ jobs:
       # Windows
       #
 
-      - name: Checkout postgresql source code (Windows)
+      - name: Download binaries (Windows)
         if: ${{ startsWith(matrix.id, 'windows-') }}
         run: |
-          source_directory="$ROOT_DIRECTORY/postgresql-src"
-          branch=$(echo "$VERSION" | awk -F. '{print "REL_"$1"_"$2}')
-          git clone --depth 1 --branch $branch -c advice.detachedHead=false https://git.postgresql.org/git/postgresql.git "$source_directory"
-          echo "SOURCE_DIRECTORY=$source_directory" | tee -a $GITHUB_ENV
+          postgresql_version=$(echo "$VERSION" | awk -F. '{print $1"."$2}')
+          curl https://get.enterprisedb.com/postgresql/postgresql-${postgresql_version}-1-windows-x64-binaries.zip > postgresql.zip
 
-      - name: Install Perl (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
-        uses: shogo82148/actions-setup-perl@v1
-
-      - name: Install Python (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install meson and ninja (Windows)
+      - name: Extract binaries (Windows)
         if: ${{ startsWith(matrix.id, 'windows-') }}
         run: |
-          pip install meson ninja
-
-      - name: Configure MSVC (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
-        uses: ilammy/msvc-dev-cmd@v1.13.0
-
-      - name: Install dependencies (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
-        run: |
-          export CYGWIN_INSTALL_DIR="/c/cygwin"
-          export PACKAGES="bison,core-utils,flex,python3,python3-devel"
-          curl -O https://cygwin.com/setup-x86_64.exe
-
-          ./setup-x86_64.exe \
-            --quiet-mode \
-            --no-desktop \
-            --no-shortcuts \
-            --local-package-dir "${CYGWIN_INSTALL_DIR}/packages" \
-            --packages "${PACKAGES}" \
-            --root "${CYGWIN_INSTALL_DIR}" \
-            --site https://mirrors.kernel.org/sourceware/cygwin/
-          
-          echo "PATH=${PATH}:${CYGWIN_INSTALL_DIR}/bin" | tee -a $GITHUB_ENV
-
-      - name: Build (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
-        run: |
-          echo "PATH (before)=$PATH"
-          # Move /mingw/bin and /usr/bin to the end of PATH to build with MSVC
-          export PATH=$(echo $PATH | awk -F: '{print substr($0, index($0, $3))":"$1":"$2}')
-          echo "PATH (after)=$PATH"
-
-          cd "$SOURCE_DIRECTORY"
-          ./configure \
-            --prefix "$INSTALL_DIRECTORY" \
-            --with-readline \
-            --with-template=win32 \
-            --without-icu
-          make
-          make install
-          cp "$SOURCE_DIRECTORY/COPYRIGHT" "$INSTALL_DIRECTORY"
-          cd "$ROOT_DIRECTORY"
+          unzip postgresql.zip
+          rm -rf pgsql/doc pgsql/pgAdmin*
+          mv pgsql "$INSTALL_DIRECTORY"
 
       #
       # Package
