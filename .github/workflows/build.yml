@@ -271,14 +271,10 @@ jobs:
             icu4c \
             llvm \
             lz4 \
-            meson \
-            ninja \
             pkg-config \
             readline \
             xz \
             zstd
-          
-          brew link icu4c --force
           
           brew_dir="/usr/local"
           if [ "${{ matrix.id }}" == "macos-arm64" ]; then
