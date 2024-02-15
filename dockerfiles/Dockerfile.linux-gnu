@@ -27,8 +27,6 @@ RUN apt-get update && \
         llvm-16 \
         lz4 \
         make \
-        meson \
-        ninja-build \
         openssl \
         patchelf \
         perl \
