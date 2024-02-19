@@ -297,17 +297,15 @@ jobs:
             --enable-option-checking=fatal \
             --enable-thread-safety \
             --without-icu \
-            $([ $major_version -ge 14 ] && echo "--with-ldap") \
+            --without-ldap \
             --with-libxml \
             --with-libxslt \
             $([ $major_version -ge 16 ] && echo "--with-llvm") \
             $([ $major_version -ge 14 ] && echo "--with-lz4") \
-            --with-perl \
             --with-pgport=5432 \
             $([ $major_version -ge 15 ] && echo "--with-python") \
             --with-readline \
             --with-system-tzdata=/usr/share/zoneinfo \
-            --with-tcl \
             --with-uuid=e2fs \
             $([ $major_version -ge 16 ] && echo "--with-zstd")
           make $([ $major_version -ge 15 ] && echo "world-bin")
