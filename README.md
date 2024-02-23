@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/theseus-rs/postgresql_binaries/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/theseus-rs/postgresql_binaries/actions?query=workflow%3Aci+branch%3Amain)
 [![License](https://img.shields.io/github/license/theseus-rs/postgresql_binaries)](./LICENSE)
+[![Github All Releases](https://img.shields.io/github/downloads/theseus-rs/postgresql-binaries/total.svg)]()
 
 PostgreSQL binaries for Linux, MacOS and Windows; releases aligned with Rust [supported platforms](https://doc.rust-lang.org/nightly/rustc/platform-support.html).
 
