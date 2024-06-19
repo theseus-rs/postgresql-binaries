@@ -339,6 +339,16 @@ jobs:
           mv pgsql "$INSTALL_DIRECTORY"
 
       #
+      # Plugins
+      #
+
+      - name: Install AWS PostgreSQL Trusted Language Extensions (https://github.com/aws/pg_tle)
+        run: |
+          git clone --branch v1.4.0 https://github.com/aws/pg_tle.git
+          PG_CONFIG="$INSTALL_DIRECTORY/bin/pg_config" make
+          make install
+
+      #
       # Package
       #
 
