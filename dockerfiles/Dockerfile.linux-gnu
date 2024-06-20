@@ -33,11 +33,10 @@ RUN apt-get update && \
         pkg-config \
         python3 \
         python3-dev \
+        rustc \
         wget \
         xsltproc \
         zstd
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 RUN branch=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print "REL_"$1"_"$2}') && \
     echo "branch=$branch" && \

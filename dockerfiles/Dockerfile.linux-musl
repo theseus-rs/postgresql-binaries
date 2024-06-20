@@ -38,11 +38,10 @@ RUN apk add --no-cache \
       python3 \
       python3-dev \
       readline-dev \
+      rust \
       util-linux-dev \
       zlib-dev \
       zstd-dev
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 RUN branch=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print "REL_"$1"_"$2}') && \
     echo "branch=$branch" && \
