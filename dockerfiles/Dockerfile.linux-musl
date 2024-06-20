@@ -8,6 +8,7 @@ RUN apk add --no-cache \
       bash \
       bison \
       clang16 \
+      curl \
       dpkg \
       dpkg-dev \
       e2fsprogs-dev \
@@ -40,6 +41,8 @@ RUN apk add --no-cache \
       util-linux-dev \
       zlib-dev \
       zstd-dev
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 RUN branch=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print "REL_"$1"_"$2}') && \
     echo "branch=$branch" && \

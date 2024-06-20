@@ -203,6 +203,12 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          components: 'llvm-tools-preview'
+          toolchain: stable
+
       - name: Setup environment
         run: |
           version=$(echo "${{ github.ref_name }}" | grep '^[0-9]*.[0-9]*.[0-9]*$') || true
@@ -344,9 +350,12 @@ jobs:
 
       - name: Install AWS PostgreSQL Trusted Language Extensions (https://github.com/aws/pg_tle)
         run: |
+          cd "$SOURCE_DIRECTORY"
           git clone --branch v1.4.0 https://github.com/aws/pg_tle.git
+          cd pg_tle
           PG_CONFIG="$INSTALL_DIRECTORY/bin/pg_config" make
           make install
+          cd "$SOURCE_DIRECTORY"
 
       #
       # Package
