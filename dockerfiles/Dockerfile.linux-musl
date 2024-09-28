@@ -61,7 +61,7 @@ RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
       --enable-integer-datetimes \
       --enable-option-checking=fatal \
       --enable-tap-tests \
-      --enable-thread-safety \
+      $([ $major_version -le 16 ] && echo "--enable-thread-safety") \
       --with-gssapi \
       $([ $major_version -ge 14 ] && echo "--with-icu" || echo "--without-icu") \
       --without-ldap \
