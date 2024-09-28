@@ -55,7 +55,7 @@ RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
       --prefix /opt/postgresql \
       --enable-integer-datetimes \
       --enable-option-checking=fatal \
-      --enable-thread-safety \
+      $([ $major_version -le 16 ] && echo "--enable-thread-safety") \
       --with-gssapi \
       --without-icu \
       --without-ldap \

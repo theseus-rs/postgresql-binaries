@@ -295,7 +295,7 @@ jobs:
             --prefix "$INSTALL_DIRECTORY" \
             --enable-integer-datetimes \
             --enable-option-checking=fatal \
-            --enable-thread-safety \
+            $([ $major_version -le 16 ] && echo "--enable-thread-safety") \
             --without-icu \
             --without-ldap \
             --with-libxml \
