@@ -176,7 +176,7 @@ jobs:
 
           - id: macos-arm64
             target: aarch64-apple-darwin
-            os: macos-14
+            os: macos-15
             architecture: "arm64"
 
           - id: macos-x64
@@ -271,6 +271,7 @@ jobs:
             icu4c \
             llvm \
             lz4 \
+            openssl \
             pkg-config \
             readline \
             xz \
@@ -278,12 +279,14 @@ jobs:
           
           brew_dir="/usr/local"
           if [ "${{ matrix.id }}" == "macos-arm64" ]; then
-            brew_dir="$HOME/brew"
+            brew_dir="/opt/homebrew"
           fi
+          brew_opt_dir="$brew_dir/opt"          
+          ls -l "$brew_opt_dir"
 
-          echo "CPPFLAGS=-I${brew_dir}/opt/icu4c/include" | tee -a $GITHUB_ENV
-          echo "LDFLAGS=-L${brew_dir}/opt/icu4c/lib" | tee -a $GITHUB_ENV
-          echo "LLVM_CONFIG=${brew_dir}/opt/llvm/bin/llvm-config" | tee -a $GITHUB_ENV
+          echo "CPPFLAGS=-I${brew_opt_dir}/icu4c/include -I${brew_opt_dir}/openssl/include" | tee -a $GITHUB_ENV
+          echo "LDFLAGS=-L${brew_opt_dir}/icu4c/lib -L${brew_opt_dir}/openssl/lib" | tee -a $GITHUB_ENV
+          echo "LLVM_CONFIG=${brew_opt_dir}/llvm/bin/llvm-config" | tee -a $GITHUB_ENV
 
       - name: Build (MacOS)
         if: ${{ startsWith(matrix.id, 'macos-') }}
@@ -302,6 +305,7 @@ jobs:
             --with-libxslt \
             $([ $major_version -ge 16 ] && echo "--with-llvm") \
             $([ $major_version -ge 14 ] && echo "--with-lz4") \
+            --with-openssl \
             --with-pgport=5432 \
             $([ $major_version -ge 15 ] && echo "--with-python") \
             --with-readline \
