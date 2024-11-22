@@ -269,10 +269,10 @@ jobs:
             fop \
             gettext \
             icu4c \
+            lld \
             llvm \
             lz4 \
             openssl \
-            pkg-config \
             readline \
             xz \
             zstd
