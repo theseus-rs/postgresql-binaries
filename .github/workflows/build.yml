@@ -52,55 +52,55 @@ jobs:
 
           - id: linux-arm64
             target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm64/v8
             architecture: "AArch64"
 
           - id: linux-arm64-musl
             target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm64/v8
             architecture: "AArch64"
 
           - id: linux-arm
             target: arm-unknown-linux-gnueabi
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v6
             architecture: "ARM"
 
           - id: linux-arm-musl
             target: arm-unknown-linux-musleabi
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v6
             architecture: "ARM"
 
           - id: linux-armhf
             target: arm-unknown-linux-gnueabihf
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v7
             architecture: "ARM"
 
           - id: linux-armhf-musl
             target: arm-unknown-linux-musleabihf
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v7
             architecture: "ARM"
 
           - id: linux-armv5te
             target: armv5te-unknown-linux-gnueabi
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v5
             architecture: "ARM"
 
           - id: linux-armv7l
             target: armv7-unknown-linux-gnueabihf
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v7
             architecture: "ARM"
 
           - id: linux-armv7l-musl
             target: armv7-unknown-linux-musleabihf
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v7
             architecture: "ARM"
 
