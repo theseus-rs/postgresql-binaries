@@ -387,9 +387,9 @@ jobs:
           postgres_file="$INSTALL_DIRECTORY/bin/postgres"
           
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            cpu_architecture=$(readelf --file-header "$postgres_file" | grep 'Machine:' | sed -e 's/ *Machine:\ *//g')
+            cpu_architecture=$(readelf --file-header "$postgres_file" | grep 'Machine:')
           else
-            cpu_architecture=$(file "$postgres_file" | awk '{print $5}')
+            cpu_architecture=$(file "$postgres_file")
           fi
           
           echo "CPU_ARCHITECTURE=$cpu_architecture" | tee -a $GITHUB_ENV
