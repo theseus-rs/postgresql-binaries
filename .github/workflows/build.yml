@@ -181,7 +181,7 @@ jobs:
 
           - id: macos-x64
             target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-15-intel
             architecture: "x86_64"
 
           #
