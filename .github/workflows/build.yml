@@ -52,55 +52,55 @@ jobs:
 
           - id: linux-arm64
             target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm64/v8
             architecture: "AArch64"
 
           - id: linux-arm64-musl
             target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm64/v8
             architecture: "AArch64"
 
           - id: linux-arm
             target: arm-unknown-linux-gnueabi
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v6
             architecture: "ARM"
 
           - id: linux-arm-musl
             target: arm-unknown-linux-musleabi
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v6
             architecture: "ARM"
 
           - id: linux-armhf
             target: arm-unknown-linux-gnueabihf
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v7
             architecture: "ARM"
 
           - id: linux-armhf-musl
             target: arm-unknown-linux-musleabihf
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v7
             architecture: "ARM"
 
           - id: linux-armv5te
             target: armv5te-unknown-linux-gnueabi
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v5
             architecture: "ARM"
 
           - id: linux-armv7l
             target: armv7-unknown-linux-gnueabihf
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v7
             architecture: "ARM"
 
           - id: linux-armv7l-musl
             target: armv7-unknown-linux-musleabihf
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/arm/v7
             architecture: "ARM"
 
@@ -176,12 +176,12 @@ jobs:
 
           - id: macos-arm64
             target: aarch64-apple-darwin
-            os: macos-15
+            os: macos-26
             architecture: "arm64"
 
           - id: macos-x64
             target: x86_64-apple-darwin
-            os: macos-15-intel
+            os: macos-26-intel
             architecture: "x86_64"
 
           #
@@ -199,7 +199,7 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
 
@@ -226,7 +226,7 @@ jobs:
       #
 
       - name: Install emulators and configure build (Linux)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ startsWith(matrix.id, 'linux-') }}
         run: |
           platform="${{ matrix.platform }}";
           
@@ -241,7 +241,7 @@ jobs:
           echo "PLATFORM=$platform" | tee -a $GITHUB_ENV
 
       - name: Build (Linux)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ startsWith(matrix.id, 'linux-') }}
         run: |
           cp $DOCKERFILE Dockerfile
           docker buildx build --build-arg "POSTGRESQL_VERSION=$VERSION" --platform "$PLATFORM" --tag postgresql-build:latest .
@@ -386,7 +386,7 @@ jobs:
         run: |
           postgres_file="$INSTALL_DIRECTORY/bin/postgres"
           
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          if [[ "${{ matrix.id }}" == linux-* ]]; then
             cpu_architecture=$(readelf --file-header "$postgres_file" | grep 'Machine:')
           else
             cpu_architecture=$(file "$postgres_file")
