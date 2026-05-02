@@ -73,7 +73,6 @@ RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
       --with-pgport=5432 \
       $([ $major_version -ge 15 ] && echo "--with-python") \
       --with-readline \
-      --with-system-tzdata=/usr/share/zoneinfo \
       --with-uuid=ossp \
       $([ $major_version -ge 16 ] && echo "--with-zstd") && \
     make $([ $major_version -ge 15 ] && echo "world-bin") && \
