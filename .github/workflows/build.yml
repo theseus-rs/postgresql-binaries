@@ -316,11 +316,15 @@ jobs:
           cp "$SOURCE_DIRECTORY/COPYRIGHT" "$INSTALL_DIRECTORY"
           cd "$ROOT_DIRECTORY"
 
-      # This allows the MacOS build to be relocated to a different directory
+      # This allows the MacOS build to be relocated to a different directory and bundles dependencies
       - name: Update library paths (MacOS)
         if: ${{ startsWith(matrix.id, 'macos-') }}
         run: |
-          find $INSTALL_DIRECTORY/bin -type f | xargs -L 1 install_name_tool -change $INSTALL_DIRECTORY/lib/libpq.5.dylib '@executable_path/../lib/libpq.5.dylib'
+          brew_dir="/usr/local"
+          if [ "${{ matrix.id }}" == "macos-arm64" ]; then
+            brew_dir="/opt/homebrew"
+          fi
+          ./scripts/macos-bundle-deps.sh "$INSTALL_DIRECTORY" "$brew_dir"
 
       #
       # Windows
