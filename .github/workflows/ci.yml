@@ -35,3 +35,4 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.initialize.outputs.ref }}
+      upload_artifacts: ${{ github.event_name == 'pull_request' }}

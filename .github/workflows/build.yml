@@ -10,6 +10,10 @@ on:
         description: if this is a release build
         type: boolean
         default: false
+      upload_artifacts:
+        description: if built archives should be uploaded as workflow artifacts
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -267,15 +271,8 @@ jobs:
         run: |
           brew install \
             fop \
-            gettext \
-            icu4c \
             lld \
-            llvm \
-            lz4 \
-            openssl \
-            readline \
-            xz \
-            zstd
+            llvm
           
           brew_dir="/usr/local"
           if [ "${{ matrix.id }}" == "macos-arm64" ]; then
@@ -429,6 +426,25 @@ jobs:
               postgresql-build:latest \
               /bin/sh -c "cd /opt/test && ls -l && ./test.sh $VERSION"
           fi
+
+      - name: Stage archive artifacts
+        if: ${{ inputs.upload_artifacts == true }}
+        run: |
+          mkdir -p artifacts
+          cp "$ASSET" "$ASSET_SUM" artifacts/
+
+          if [ -n "${WINDOWS_ASSET:-}" ]; then
+            cp "$WINDOWS_ASSET" "$WINDOWS_ASSET_SUM" artifacts/
+          fi
+
+      - name: Upload archive artifacts
+        if: ${{ inputs.upload_artifacts == true }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: postgresql-${{ matrix.id }}
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
 
       #
       # Release
