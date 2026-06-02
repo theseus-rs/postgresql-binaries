@@ -46,6 +46,7 @@ jobs:
           - macos-arm64
           - macos-x64
           - windows-x64
+          - windows-arm64
 
         include:
           # When adding a new target, define a new id above
@@ -196,6 +197,19 @@ jobs:
             target: x86_64-pc-windows-msvc
             os: windows-latest
             architecture: "x86-64"
+            msvc_arch: "x64"
+            pe_machine: "0x8664"
+            python_architecture: "x64"
+            vcpkg_triplet: "x64-windows"
+
+          - id: windows-arm64
+            target: aarch64-pc-windows-msvc
+            os: windows-11-arm
+            architecture: "AArch64"
+            msvc_arch: "arm64"
+            pe_machine: "0xaa64"
+            python_architecture: "arm64"
+            vcpkg_triplet: "arm64-windows"
 
     defaults:
       run:
@@ -209,7 +223,7 @@ jobs:
 
       - name: Setup environment
         run: |
-          version=$(echo "${{ github.ref_name }}" | grep '^[0-9]*.[0-9]*.[0-9]*$') || true
+          version=$(echo "${{ github.ref_name }}" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$') || true
 
           if [ -z "$version" ]; then
             # Set default version for non-release builds
@@ -217,137 +231,76 @@ jobs:
           fi
 
           root_directory="$(pwd)"
+          postgresql_version=$(echo "$version" | awk -F. '{print ""$1"."$2}')
+          postgresql_major_version=$(echo "$version" | awk -F. '{print ""$1}')
           archive="postgresql-$version-${{ matrix.target }}"
           install_directory="$root_directory/$archive"
 
           echo "ARCHIVE=$archive" | tee -a $GITHUB_ENV
+          echo "BUILD_SUPPORTED=true" | tee -a $GITHUB_ENV
           echo "INSTALL_DIRECTORY=$install_directory" | tee -a $GITHUB_ENV
+          echo "PLATFORM=${{ matrix.platform }}" | tee -a $GITHUB_ENV
+          echo "POSTGRESQL_MAJOR_VERSION=$postgresql_major_version" | tee -a $GITHUB_ENV
+          echo "POSTGRESQL_VERSION=$postgresql_version" | tee -a $GITHUB_ENV
           echo "ROOT_DIRECTORY=$root_directory" | tee -a $GITHUB_ENV
           echo "VERSION=$version" | tee -a $GITHUB_ENV
+
+      - name: Check build support
+        id: build_support
+        run: |
+          supported=true
+
+          if [[ "${{ matrix.id }}" == "windows-arm64" && "$POSTGRESQL_MAJOR_VERSION" -lt 16 ]]; then
+            echo "::notice::Windows ARM64 source builds require PostgreSQL 16 or newer; skipping PostgreSQL $POSTGRESQL_VERSION."
+            supported=false
+          fi
+
+          echo "supported=$supported" | tee -a "$GITHUB_OUTPUT"
+          echo "BUILD_SUPPORTED=$supported" | tee -a "$GITHUB_ENV"
 
       #
       # Linux Build
       #
 
-      - name: Install emulators and configure build (Linux)
-        if: ${{ startsWith(matrix.id, 'linux-') }}
-        run: |
-          platform="${{ matrix.platform }}";
-          
-          docker run --privileged --rm tonistiigi/binfmt --install all
-          
-          if [[ "${{ matrix.id }}" = *musl* ]]; then
-            echo "DOCKERFILE=dockerfiles/Dockerfile.linux-musl" | tee -a $GITHUB_ENV
-          else
-            echo "DOCKERFILE=dockerfiles/Dockerfile.linux-gnu" | tee -a $GITHUB_ENV
-          fi
-          
-          echo "PLATFORM=$platform" | tee -a $GITHUB_ENV
-
       - name: Build (Linux)
         if: ${{ startsWith(matrix.id, 'linux-') }}
-        run: |
-          cp $DOCKERFILE Dockerfile
-          docker buildx build --build-arg "POSTGRESQL_VERSION=$VERSION" --platform "$PLATFORM" --tag postgresql-build:latest .
-          
-          docker create --platform "$PLATFORM" --name pgbuild postgresql-build:latest
-          docker cp pgbuild:/opt/postgresql $INSTALL_DIRECTORY
-          docker rm -f pgbuild
+        run: ./scripts/build-linux.sh "$VERSION" "${{ matrix.target }}" "${{ matrix.platform }}"
 
       #
       # MacOS Build
       #
 
-      - name: Checkout postgresql source code (MacOS)
-        if: ${{ startsWith(matrix.id, 'macos-') }}
-        run: |
-          source_directory="$ROOT_DIRECTORY/postgresql-src"
-          branch=$(echo "$VERSION" | awk -F. '{print "REL_"$1"_"$2}')
-          git clone --depth 1 --branch $branch -c advice.detachedHead=false https://git.postgresql.org/git/postgresql.git "$source_directory"
-          echo "SOURCE_DIRECTORY=$source_directory" | tee -a $GITHUB_ENV
-
-      - name: Configure build (MacOS)
-        if: ${{ startsWith(matrix.id, 'macos-') }}
-        run: |
-          brew install \
-            fop \
-            lld \
-            llvm
-          
-          brew_dir="/usr/local"
-          if [ "${{ matrix.id }}" == "macos-arm64" ]; then
-            brew_dir="/opt/homebrew"
-          fi
-          brew_opt_dir="$brew_dir/opt"          
-          ls -l "$brew_opt_dir"
-
-          echo "CPPFLAGS=-I${brew_opt_dir}/icu4c/include -I${brew_opt_dir}/openssl/include" | tee -a $GITHUB_ENV
-          echo "LDFLAGS=-L${brew_opt_dir}/icu4c/lib -L${brew_opt_dir}/openssl/lib" | tee -a $GITHUB_ENV
-          echo "LLVM_CONFIG=${brew_opt_dir}/llvm/bin/llvm-config" | tee -a $GITHUB_ENV
-
       - name: Build (MacOS)
         if: ${{ startsWith(matrix.id, 'macos-') }}
-        run: |
-          cd "$SOURCE_DIRECTORY"
-          major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}')
-          
-          ./configure $build_directory \
-            --prefix "$INSTALL_DIRECTORY" \
-            --enable-integer-datetimes \
-            --enable-option-checking=fatal \
-            $([ $major_version -le 16 ] && echo "--enable-thread-safety") \
-            $([ $major_version -ge 14 ] && echo "--with-icu" || echo "--without-icu") \
-            --without-ldap \
-            --with-libxml \
-            --with-libxslt \
-            $([ $major_version -ge 16 ] && echo "--with-llvm") \
-            $([ $major_version -ge 14 ] && echo "--with-lz4") \
-            --with-openssl \
-            --with-pgport=5432 \
-            $([ $major_version -ge 15 ] && echo "--with-python") \
-            --with-readline \
-            --with-system-tzdata=/usr/share/zoneinfo \
-            --with-uuid=e2fs \
-            $([ $major_version -ge 16 ] && echo "--with-zstd")
-          make $([ $major_version -ge 15 ] && echo "world-bin")
-          make $([ $major_version -ge 15 ] && echo "install-world-bin" || echo "install")
-          make -C contrib install
-
-          cp "$SOURCE_DIRECTORY/COPYRIGHT" "$INSTALL_DIRECTORY"
-          cd "$ROOT_DIRECTORY"
-
-      # This allows the MacOS build to be relocated to a different directory and bundles dependencies
-      - name: Update library paths (MacOS)
-        if: ${{ startsWith(matrix.id, 'macos-') }}
-        run: |
-          brew_dir="/usr/local"
-          if [ "${{ matrix.id }}" == "macos-arm64" ]; then
-            brew_dir="/opt/homebrew"
-          fi
-          ./scripts/macos-bundle-deps.sh "$INSTALL_DIRECTORY" "$brew_dir"
+        run: ./scripts/build-macos.sh "$VERSION" "${{ matrix.target }}"
 
       #
       # Windows
       #
 
-      - name: Download binaries (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
-        run: |
-          postgresql_version=$(echo "$VERSION" | awk -F. '{print $1"."$2}')
-          curl https://get.enterprisedb.com/postgresql/postgresql-${postgresql_version}-1-windows-x64-binaries.zip > postgresql.zip
+      - name: Setup Python (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+          architecture: ${{ matrix.python_architecture }}
 
-      - name: Extract binaries (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
-        run: |
-          unzip postgresql.zip
-          rm -rf pgsql/doc pgsql/pgAdmin*
-          mv pgsql "$INSTALL_DIRECTORY"
+      - name: Configure MSVC (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.msvc_arch }}
+
+      - name: Build (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        run: ./scripts/build-windows.sh "$VERSION" "${{ matrix.target }}" "${{ matrix.vcpkg_triplet }}"
 
       #
       # Package
       #
 
       - name: Prepare archive
+        if: ${{ steps.build_support.outputs.supported == 'true' }}
         run: |
           cp $ROOT_DIRECTORY/{README.md,LICENSE} "$INSTALL_DIRECTORY"
           ls -l "$INSTALL_DIRECTORY/"
@@ -355,7 +308,7 @@ jobs:
       # The .tar.gz archive is the primary archive for all platforms.  This archive
       # provides a consistent experience for programmatic cases (e.g. embedded).
       - name: Build archive (Linux, MacOS)
-        if: ${{ !startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && !startsWith(matrix.id, 'windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
@@ -363,7 +316,7 @@ jobs:
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
 
       - name: Build archive (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && startsWith(matrix.id, 'windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           certutil -hashfile "$ARCHIVE.tar.gz" SHA256 > "$ARCHIVE.tar.gz.sha256"
@@ -372,7 +325,7 @@ jobs:
 
       # The zip archive for Windows is created as a convenience to users for manual installations.
       - name: Build .zip archive (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && startsWith(matrix.id, 'windows-') }}
         run: |
           7z a "$ARCHIVE.zip" "$ARCHIVE"
           certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
@@ -384,10 +337,32 @@ jobs:
       #
 
       - name: Test the binary file cpu architecture
+        if: ${{ steps.build_support.outputs.supported == 'true' }}
         run: |
           postgres_file="$INSTALL_DIRECTORY/bin/postgres"
           
-          if [[ "${{ matrix.id }}" == linux-* ]]; then
+          if [[ "${{ matrix.id }}" == windows-* ]]; then
+            postgres_file="$INSTALL_DIRECTORY/bin/postgres.exe"
+            cpu_architecture=$(python - "$postgres_file" <<'PY'
+          import pathlib
+          import struct
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          data = path.read_bytes()
+
+          if data[:2] != b'MZ':
+              raise SystemExit(f"{path} is not a PE executable")
+
+          pe_offset = struct.unpack_from('<I', data, 0x3c)[0]
+          if data[pe_offset:pe_offset + 4] != b'PE\0\0':
+              raise SystemExit(f"{path} is missing a PE header")
+
+          machine = struct.unpack_from('<H', data, pe_offset + 4)[0]
+          sys.stdout.write(f"0x{machine:04x}")
+          PY
+            )
+          elif [[ "${{ matrix.id }}" == linux-* ]]; then
             cpu_architecture=$(readelf --file-header "$postgres_file" | grep 'Machine:')
           else
             cpu_architecture=$(file "$postgres_file")
@@ -395,12 +370,20 @@ jobs:
           
           echo "CPU_ARCHITECTURE=$cpu_architecture" | tee -a $GITHUB_ENV
           
-          if [[ "$cpu_architecture" != *"${{ matrix.architecture }}"* ]]; then
-            echo "ERROR: CPU architecture ($cpu_architecture) does not match expected architecture (${{ matrix.architecture }})"
-            exit 1
+          if [[ "${{ matrix.id }}" == windows-* ]]; then
+            if [[ "$cpu_architecture" != "${{ matrix.pe_machine }}" ]]; then
+              echo "ERROR: CPU architecture ($cpu_architecture) does not match expected architecture (${{ matrix.pe_machine }})"
+              exit 1
+            fi
+          else
+            if [[ "$cpu_architecture" != *"${{ matrix.architecture }}"* ]]; then
+              echo "ERROR: CPU architecture ($cpu_architecture) does not match expected architecture (${{ matrix.architecture }})"
+              exit 1
+            fi
           fi
 
       - name: Test build / archive
+        if: ${{ steps.build_support.outputs.supported == 'true' }}
         run: |
           test_directory=$(mktemp -d)
           tar xzf "$ARCHIVE.tar.gz" -C "$test_directory"
@@ -432,7 +415,7 @@ jobs:
           fi
 
       - name: Stage archive artifacts
-        if: ${{ inputs.upload_artifacts == true }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.upload_artifacts == true }}
         run: |
           mkdir -p artifacts
           cp "$ASSET" "$ASSET_SUM" artifacts/
@@ -442,7 +425,7 @@ jobs:
           fi
 
       - name: Upload archive artifacts
-        if: ${{ inputs.upload_artifacts == true }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.upload_artifacts == true }}
         uses: actions/upload-artifact@v7
         with:
           name: postgresql-${{ matrix.id }}
@@ -455,14 +438,14 @@ jobs:
       #
 
       - name: Upload release archive
-        if: ${{ inputs.release == true }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.release == true }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$VERSION" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
 
       - name: Upload release archive (Windows)
-        if: ${{ inputs.release == true && startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.release == true && startsWith(matrix.id, 'windows-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
