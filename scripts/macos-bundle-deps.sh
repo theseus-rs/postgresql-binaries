@@ -69,12 +69,18 @@ bundle_lib() {
         case "$dep" in
             "$BREW_PREFIX"/*) dep_path="$dep" ;;
             @loader_path/*) dep_path="$(dirname "$lib_path")/${dep#@loader_path/}" ;;
+            @rpath/*)
+                dep_path="$(dirname "$lib_path")/${dep#@rpath/}"
+                if [ ! -e "$dep_path" ]; then continue; fi
+                ;;
             *) continue ;;
         esac
+        local dep_name
+        dep_name=$(basename "$dep")
+        if [ "$dep_name" = "$lib_name" ]; then continue; fi
         local dep_real_path
         dep_real_path=$(get_realpath "$dep_path")
-        bundle_lib "$dep_real_path" "$(basename "$dep")"
-        local dep_name=$(basename "$dep")
+        bundle_lib "$dep_real_path" "$dep_name"
         echo "    Changing dependency $dep to @loader_path/../lib/$dep_name in $lib_name"
         install_name_tool -change "$dep" "@loader_path/../lib/$dep_name" "$INSTALL_DIR/lib/$lib_name"
     done

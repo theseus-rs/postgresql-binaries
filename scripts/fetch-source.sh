@@ -21,11 +21,14 @@ checkout="$temporary/source"
 # TLS authenticates the upstream server. Do not inherit a local TLS bypass.
 # Retry interrupted transfers in a fresh checkout. PostgreSQL's GitHub mirror
 # provides a fallback when the upstream Git server cannot serve complete packs.
+# Keep source files in LF form: Git Bash's Perl generators cannot parse CRLF
+# input produced by the Windows runner's core.autocrlf setting.
 downloaded=false
 for url in "$url" https://github.com/postgres/postgres.git; do
     for attempt in 1 2 3; do
         if git -c http.sslVerify=true -c http.version=HTTP/1.1 clone \
-            --depth 1 --branch "$tag" -c advice.detachedHead=false "$url" "$checkout"; then
+            --depth 1 --branch "$tag" -c advice.detachedHead=false \
+            -c core.autocrlf=false -c core.eol=lf "$url" "$checkout"; then
             downloaded=true
             break 2
         fi
@@ -45,7 +48,12 @@ if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 test "$commit" = "$(git -C "$checkout" rev-parse --verify "refs/tags/$tag^{commit}")"
 git -C "$checkout" archive --format=tar HEAD > "$temporary/source.tar"
-digest=$(shasum -a 256 "$temporary/source.tar" | awk '{print $1}')
+if command -v sha256sum > /dev/null 2>&1; then
+    digest=$(sha256sum -b < "$temporary/source.tar")
+else
+    digest=$(shasum -a 256 -b < "$temporary/source.tar")
+fi
+digest="${digest%% *}"
 if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
     echo 'Invalid source archive digest' >&2
     exit 1
