@@ -433,48 +433,10 @@ jobs:
           python-version: "3.x"
           architecture: ${{ matrix.python_architecture }}
 
-      - name: Patch PostgreSQL ARM64 DEF generation (Windows)
+      - name: Patch PostgreSQL ARM64 support (Windows)
         if: ${{ matrix.id == 'windows-arm64' && steps.build_support.outputs.supported == 'true' }}
         run: |
-          python - "$SOURCE_DIRECTORY/src/tools/msvc_gendef.pl" <<'PY'
-          from pathlib import Path
-          import sys
-
-          path = Path(sys.argv[1])
-          if not path.exists():
-              print(f"{path} does not exist; no ARM64 DEF patch needed")
-              raise SystemExit(0)
-
-          text = path.read_text(encoding="utf-8")
-          replacements = [
-              (
-                  "# Strip the leading underscore for win32, but not x64",
-                  "# Strip the leading underscore for win32, but not x64 or ARM64",
-              ),
-              (
-                  'unless ($arch eq "x86_64");',
-                  'unless ($arch eq "x86_64" || $arch eq "aarch64");',
-              ),
-              (
-                  '. "    arch: x86 | x86_64\\n"',
-                  '. "    arch: x86 | x86_64 | aarch64\\n"',
-              ),
-              (
-                  "unless ($arch eq 'x86' || $arch eq 'x86_64');",
-                  "unless ($arch eq 'x86' || $arch eq 'x86_64' || $arch eq 'aarch64');",
-              ),
-          ]
-
-          for old, new in replacements:
-              if old not in text:
-                  if new in text:
-                      continue
-                  raise SystemExit(f"Unable to patch {path}; missing pattern: {old!r}")
-              text = text.replace(old, new, 1)
-
-          path.write_text(text, encoding="utf-8")
-          print(f"Patched {path} to accept ARM64 DEF generation")
-          PY
+          python "$ROOT_DIRECTORY/scripts/patch-postgresql-windows-arm64.py" "$SOURCE_DIRECTORY"
 
       - name: Configure MSVC (Windows)
         if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}

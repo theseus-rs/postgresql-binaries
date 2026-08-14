@@ -34,14 +34,17 @@ sign_mach_o_files() {
 # Function to bundle a library and its dependencies
 bundle_lib() {
     local lib_path="$1"
-    local lib_name=$(basename "$lib_path")
+    local lib_name="${2:-}"
+    if [ -z "$lib_name" ]; then
+        lib_name=$(basename "$lib_path")
+    fi
     
     if [ -f "$INSTALL_DIR/lib/$lib_name" ]; then
         return
     fi
     
     echo "  Bundling $lib_name"
-    cp "$lib_path" "$INSTALL_DIR/lib/"
+    cp "$lib_path" "$INSTALL_DIR/lib/$lib_name"
     chmod +w "$INSTALL_DIR/lib/$lib_name"
     
     # Set the ID of the dylib to be relative
@@ -50,8 +53,8 @@ bundle_lib() {
     # Get dependencies and fix them
     otool -L "$INSTALL_DIR/lib/$lib_name" | grep "$BREW_PREFIX" | awk '{print $1}' | while read -r dep; do
         local dep_real_path=$(get_realpath "$dep")
-        bundle_lib "$dep_real_path"
         local dep_name=$(basename "$dep")
+        bundle_lib "$dep_real_path" "$dep_name"
         echo "    Changing dependency $dep to @loader_path/../lib/$dep_name in $lib_name"
         install_name_tool -change "$dep" "@loader_path/../lib/$dep_name" "$INSTALL_DIR/lib/$lib_name"
     done
@@ -64,8 +67,8 @@ find "$INSTALL_DIR/bin" -type f | while read -r binary; do
         echo "  Processing binary: $(basename "$binary")"
         otool -L "$binary" | grep "$BREW_PREFIX" | awk '{print $1}' | while read -r dep; do
             dep_real_path=$(get_realpath "$dep")
-            bundle_lib "$dep_real_path"
             dep_name=$(basename "$dep")
+            bundle_lib "$dep_real_path" "$dep_name"
             echo "    Changing dependency $dep to @loader_path/../lib/$dep_name"
             install_name_tool -change "$dep" "@loader_path/../lib/$dep_name" "$binary"
         done
@@ -90,8 +93,8 @@ find "$INSTALL_DIR/lib" -maxdepth 1 -name "*.dylib" | while read -r lib; do
         # Fix dependencies to other Homebrew libs
         otool -L "$lib" | grep "$BREW_PREFIX" | awk '{print $1}' | while read -r dep; do
             dep_real_path=$(get_realpath "$dep")
-            bundle_lib "$dep_real_path"
             dep_name=$(basename "$dep")
+            bundle_lib "$dep_real_path" "$dep_name"
             install_name_tool -change "$dep" "@loader_path/../lib/$dep_name" "$lib"
         done
 
