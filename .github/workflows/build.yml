@@ -180,12 +180,12 @@ jobs:
 
           - id: macos-arm64
             target: aarch64-apple-darwin
-            os: macos-26
+            os: macos-15
             architecture: "arm64"
 
           - id: macos-x64
             target: x86_64-apple-darwin
-            os: macos-26-intel
+            os: macos-15-intel
             architecture: "x86_64"
 
           #
@@ -213,7 +213,7 @@ jobs:
 
           if [ -z "$version" ]; then
             # Set default version for non-release builds
-            version="18.4.0"
+            version="18.6.0"
           fi
 
           root_directory="$(pwd)"
