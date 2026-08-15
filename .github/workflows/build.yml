@@ -46,6 +46,7 @@ jobs:
           - macos-arm64
           - macos-x64
           - windows-x64
+          - windows-arm64
 
         include:
           # When adding a new target, define a new id above
@@ -196,6 +197,19 @@ jobs:
             target: x86_64-pc-windows-msvc
             os: windows-latest
             architecture: "x86-64"
+            msvc_arch: "x64"
+            pe_machine: "0x8664"
+            python_architecture: "x64"
+            vcpkg_triplet: "x64-windows"
+
+          - id: windows-arm64
+            target: aarch64-pc-windows-msvc
+            os: windows-11-arm
+            architecture: "AArch64"
+            msvc_arch: "arm64"
+            pe_machine: "0xaa64"
+            python_architecture: "arm64"
+            vcpkg_triplet: "arm64-windows"
 
     defaults:
       run:
@@ -209,7 +223,7 @@ jobs:
 
       - name: Setup environment
         run: |
-          version=$(echo "${{ github.ref_name }}" | grep '^[0-9]*.[0-9]*.[0-9]*$') || true
+          version=$(echo "${{ github.ref_name }}" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$') || true
 
           if [ -z "$version" ]; then
             # Set default version for non-release builds
@@ -217,13 +231,31 @@ jobs:
           fi
 
           root_directory="$(pwd)"
+          postgresql_version=$(echo "$version" | awk -F. '{print ""$1"."$2}')
+          postgresql_major_version=$(echo "$version" | awk -F. '{print ""$1}')
           archive="postgresql-$version-${{ matrix.target }}"
           install_directory="$root_directory/$archive"
 
           echo "ARCHIVE=$archive" | tee -a $GITHUB_ENV
+          echo "BUILD_SUPPORTED=true" | tee -a $GITHUB_ENV
           echo "INSTALL_DIRECTORY=$install_directory" | tee -a $GITHUB_ENV
+          echo "POSTGRESQL_MAJOR_VERSION=$postgresql_major_version" | tee -a $GITHUB_ENV
+          echo "POSTGRESQL_VERSION=$postgresql_version" | tee -a $GITHUB_ENV
           echo "ROOT_DIRECTORY=$root_directory" | tee -a $GITHUB_ENV
           echo "VERSION=$version" | tee -a $GITHUB_ENV
+
+      - name: Check build support
+        id: build_support
+        run: |
+          supported=true
+
+          if [[ "${{ matrix.id }}" == "windows-arm64" && "$POSTGRESQL_MAJOR_VERSION" -lt 16 ]]; then
+            echo "::notice::Windows ARM64 source builds require PostgreSQL 16 or newer; skipping PostgreSQL $POSTGRESQL_VERSION."
+            supported=false
+          fi
+
+          echo "supported=$supported" | tee -a "$GITHUB_OUTPUT"
+          echo "BUILD_SUPPORTED=$supported" | tee -a "$GITHUB_ENV"
 
       #
       # Linux Build
@@ -271,19 +303,71 @@ jobs:
         run: |
           brew install \
             fop \
+            icu4c \
+            libxml2 \
+            libxslt \
             lld \
-            llvm
+            llvm \
+            lz4 \
+            openssl@3 \
+            readline \
+            zstd
           
           brew_dir="/usr/local"
           if [ "${{ matrix.id }}" == "macos-arm64" ]; then
             brew_dir="/opt/homebrew"
           fi
-          brew_opt_dir="$brew_dir/opt"          
+          brew_opt_dir="$brew_dir/opt"
           ls -l "$brew_opt_dir"
 
-          echo "CPPFLAGS=-I${brew_opt_dir}/icu4c/include -I${brew_opt_dir}/openssl/include" | tee -a $GITHUB_ENV
-          echo "LDFLAGS=-L${brew_opt_dir}/icu4c/lib -L${brew_opt_dir}/openssl/lib" | tee -a $GITHUB_ENV
-          echo "LLVM_CONFIG=${brew_opt_dir}/llvm/bin/llvm-config" | tee -a $GITHUB_ENV
+          brew_prefix() {
+            local formula="$1"
+            local fallback="$2"
+
+            brew --prefix "$formula" 2>/dev/null || printf '%s\n' "$fallback"
+          }
+
+          icu_prefix="$(brew_prefix icu4c "${brew_opt_dir}/icu4c")"
+          openssl_prefix="$(brew_prefix openssl@3 "${brew_opt_dir}/openssl")"
+          libxml2_prefix="$(brew_prefix libxml2 "${brew_opt_dir}/libxml2")"
+          libxslt_prefix="$(brew_prefix libxslt "${brew_opt_dir}/libxslt")"
+          llvm_prefix="$(brew_prefix llvm "${brew_opt_dir}/llvm")"
+          lz4_prefix="$(brew_prefix lz4 "${brew_opt_dir}/lz4")"
+          readline_prefix="$(brew_prefix readline "${brew_opt_dir}/readline")"
+          zstd_prefix="$(brew_prefix zstd "${brew_opt_dir}/zstd")"
+
+          include_flags=(
+            "-I${icu_prefix}/include"
+            "-I${openssl_prefix}/include"
+            "-I${libxml2_prefix}/include"
+            "-I${libxslt_prefix}/include"
+            "-I${lz4_prefix}/include"
+            "-I${readline_prefix}/include"
+            "-I${zstd_prefix}/include"
+          )
+          library_flags=(
+            "-L${icu_prefix}/lib"
+            "-L${openssl_prefix}/lib"
+            "-L${libxml2_prefix}/lib"
+            "-L${libxslt_prefix}/lib"
+            "-L${lz4_prefix}/lib"
+            "-L${readline_prefix}/lib"
+            "-L${zstd_prefix}/lib"
+          )
+          pkg_config_paths=(
+            "${icu_prefix}/lib/pkgconfig"
+            "${openssl_prefix}/lib/pkgconfig"
+            "${libxml2_prefix}/lib/pkgconfig"
+            "${libxslt_prefix}/lib/pkgconfig"
+            "${lz4_prefix}/lib/pkgconfig"
+            "${readline_prefix}/lib/pkgconfig"
+            "${zstd_prefix}/lib/pkgconfig"
+          )
+
+          echo "CPPFLAGS=${include_flags[*]}" | tee -a "$GITHUB_ENV"
+          echo "LDFLAGS=${library_flags[*]}" | tee -a "$GITHUB_ENV"
+          echo "LLVM_CONFIG=${llvm_prefix}/bin/llvm-config" | tee -a "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$(IFS=:; echo "${pkg_config_paths[*]}")${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" | tee -a "$GITHUB_ENV"
 
       - name: Build (MacOS)
         if: ${{ startsWith(matrix.id, 'macos-') }}
@@ -330,24 +414,198 @@ jobs:
       # Windows
       #
 
-      - name: Download binaries (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
+      - name: Checkout postgresql source code (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
         run: |
-          postgresql_version=$(echo "$VERSION" | awk -F. '{print $1"."$2}')
-          curl https://get.enterprisedb.com/postgresql/postgresql-${postgresql_version}-1-windows-x64-binaries.zip > postgresql.zip
+          runner_temp="$(cygpath -u "$RUNNER_TEMP")"
+          source_archive="$runner_temp/postgresql-$POSTGRESQL_VERSION.tar.gz"
+          source_directory="$runner_temp/postgresql-$POSTGRESQL_VERSION"
 
-      - name: Extract binaries (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
+          curl -fsSL "https://ftp.postgresql.org/pub/source/v$POSTGRESQL_VERSION/postgresql-$POSTGRESQL_VERSION.tar.gz" -o "$source_archive"
+          tar xzf "$source_archive" -C "$runner_temp"
+
+          echo "SOURCE_DIRECTORY=$source_directory" | tee -a "$GITHUB_ENV"
+
+      - name: Setup Python (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+          architecture: ${{ matrix.python_architecture }}
+
+      - name: Patch PostgreSQL ARM64 support (Windows)
+        if: ${{ matrix.id == 'windows-arm64' && steps.build_support.outputs.supported == 'true' }}
         run: |
-          unzip postgresql.zip
-          rm -rf pgsql/doc pgsql/pgAdmin*
-          mv pgsql "$INSTALL_DIRECTORY"
+          python "$ROOT_DIRECTORY/scripts/patch-postgresql-windows-arm64.py" "$SOURCE_DIRECTORY"
+
+      - name: Configure MSVC (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.msvc_arch }}
+
+      - name: Install build dependencies (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install meson ninja
+          choco install winflexbison3 --yes --no-progress
+          echo "C:\\ProgramData\\chocolatey\\bin" >> "$GITHUB_PATH"
+
+          export PATH="/c/ProgramData/chocolatey/bin:$PATH"
+          hash -r
+          win_flex --version
+          win_bison --version
+
+          runner_temp="$(cygpath -u "$RUNNER_TEMP")"
+          vcpkg_root="${VCPKG_INSTALLATION_ROOT:-}"
+
+          if [ -n "$vcpkg_root" ]; then
+            vcpkg_root="$(cygpath -u "$vcpkg_root")"
+          elif [ -d /c/vcpkg ]; then
+            vcpkg_root="/c/vcpkg"
+          else
+            vcpkg_root="$runner_temp/vcpkg"
+          fi
+
+          if [ ! -f "$vcpkg_root/vcpkg.exe" ]; then
+            git clone --depth 1 https://github.com/microsoft/vcpkg "$vcpkg_root"
+            cmd //c "$(cygpath -w "$vcpkg_root")\\bootstrap-vcpkg.bat -disableMetrics"
+          fi
+
+          vcpkg_exe="$vcpkg_root/vcpkg.exe"
+          export VCPKG_ROOT="$vcpkg_root"
+          "$vcpkg_exe" install \
+            --triplet "${{ matrix.vcpkg_triplet }}" \
+            --clean-after-build \
+            icu \
+            libxml2 \
+            libxslt \
+            lz4 \
+            openssl \
+            zlib \
+            zstd
+
+          vcpkg_installed="$vcpkg_root/installed/${{ matrix.vcpkg_triplet }}"
+
+          echo "CMAKE_PREFIX_PATH=$(cygpath -m "$vcpkg_installed")" | tee -a "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$(cygpath -m "$vcpkg_installed/lib/pkgconfig");$(cygpath -m "$vcpkg_installed/share/pkgconfig")" | tee -a "$GITHUB_ENV"
+          echo "VCPKG_INSTALLED=$vcpkg_installed" | tee -a "$GITHUB_ENV"
+          echo "VCPKG_ROOT=$vcpkg_root" | tee -a "$GITHUB_ENV"
+          echo "$(cygpath -w "$vcpkg_installed/bin")" >> "$GITHUB_PATH"
+
+      - name: Build (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        run: |
+          vctools_bin="$(cygpath -u "$VCToolsInstallDir")/bin/Host${VSCMD_ARG_HOST_ARCH}/${VSCMD_ARG_TGT_ARCH}"
+          export PATH="$vctools_bin:$VCPKG_INSTALLED/bin:$PATH"
+          export MSYS2_ARG_CONV_EXCL="/nologo;/symbols;/out:"
+          hash -r
+
+          link_path="$(command -v link)"
+          echo "Using cl: $(command -v cl)"
+          echo "Using link: $link_path"
+
+          if [[ "$link_path" == "/usr/bin/link" || "$link_path" == *"/Git/usr/bin/link"* ]]; then
+            echo "ERROR: MSVC link.exe is not first on PATH"
+            exit 1
+          fi
+
+          if [ "$POSTGRESQL_MAJOR_VERSION" -ge 16 ]; then
+            build_directory="$(cygpath -u "$RUNNER_TEMP")/postgresql-build"
+            python_path="$(cygpath -m "$(command -v python)")"
+
+            meson setup "$build_directory" "$SOURCE_DIRECTORY" \
+              --prefix "$(cygpath -m "$INSTALL_DIRECTORY")" \
+              --buildtype release \
+              -Dauto_features=disabled \
+              -Ddocs=disabled \
+              -Ddocs_pdf=disabled \
+              -Dextra_include_dirs="$(cygpath -m "$VCPKG_INSTALLED/include")" \
+              -Dextra_lib_dirs="$(cygpath -m "$VCPKG_INSTALLED/lib")" \
+              -Dgssapi=disabled \
+              -Dicu=enabled \
+              -Dldap=disabled \
+              -Dlibxml=enabled \
+              -Dlibxslt=enabled \
+              -Dllvm=disabled \
+              -Dlz4=enabled \
+              -Dnls=disabled \
+              -Dpgport=5432 \
+              -Dplperl=disabled \
+              -Dplpython=enabled \
+              -Dpltcl=disabled \
+              -DPYTHON="$python_path" \
+              -Dreadline=disabled \
+              -Dssl=openssl \
+              -Duuid=none \
+              -Dzlib=enabled \
+              -Dzstd=enabled
+            meson compile -C "$build_directory"
+            meson install -C "$build_directory"
+          else
+            vcpkg_prefix="$(cygpath -m "$VCPKG_INSTALLED")"
+            python_root="$(python - <<'PY'
+          import sys
+          print(sys.base_prefix)
+          PY
+            )"
+            python_root="$(cygpath -m "$python_root")"
+            config_path="$SOURCE_DIRECTORY/src/tools/msvc/config.pl"
+            buildenv_path="$SOURCE_DIRECTORY/src/tools/msvc/buildenv.pl"
+
+            {
+              echo 'use strict;'
+              echo 'use warnings;'
+              echo 'our $config = {'
+              echo '  asserts => 0,'
+              echo '  ldap => 0,'
+              echo "  icu => '$vcpkg_prefix',"
+              echo "  lz4 => '$vcpkg_prefix',"
+              echo "  openssl => '$vcpkg_prefix',"
+              if [ "$POSTGRESQL_MAJOR_VERSION" -ge 15 ]; then
+                echo "  python => '$python_root',"
+              fi
+              echo "  xml => '$vcpkg_prefix',"
+              echo "  xslt => '$vcpkg_prefix',"
+              echo "  zlib => '$vcpkg_prefix',"
+              echo '};'
+              echo '1;'
+            } > "$config_path"
+
+            {
+              echo '$ENV{MSBFLAGS}="/m";'
+              echo '1;'
+            } > "$buildenv_path"
+
+            export PATH="/c/Strawberry/perl/bin:$PATH"
+            cd "$SOURCE_DIRECTORY/src/tools/msvc"
+            perl build.pl
+            perl install.pl "$(cygpath -m "$INSTALL_DIRECTORY")"
+          fi
+
+          cp "$SOURCE_DIRECTORY/COPYRIGHT" "$INSTALL_DIRECTORY"
+
+      - name: Stage runtime dependencies (Windows)
+        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        run: |
+          if [ -d "$VCPKG_INSTALLED/bin" ]; then
+            find "$VCPKG_INSTALLED/bin" -maxdepth 1 -type f -name '*.dll' -exec cp {} "$INSTALL_DIRECTORY/bin/" \;
+          fi
+
+          python_root="$(python - <<'PY'
+          import sys
+          print(sys.base_prefix)
+          PY
+          )"
+          find "$python_root" -maxdepth 1 -type f -iname 'python*.dll' -exec cp {} "$INSTALL_DIRECTORY/bin/" \; || true
 
       #
       # Package
       #
 
       - name: Prepare archive
+        if: ${{ steps.build_support.outputs.supported == 'true' }}
         run: |
           cp $ROOT_DIRECTORY/{README.md,LICENSE} "$INSTALL_DIRECTORY"
           ls -l "$INSTALL_DIRECTORY/"
@@ -355,7 +613,7 @@ jobs:
       # The .tar.gz archive is the primary archive for all platforms.  This archive
       # provides a consistent experience for programmatic cases (e.g. embedded).
       - name: Build archive (Linux, MacOS)
-        if: ${{ !startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && !startsWith(matrix.id, 'windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
@@ -363,7 +621,7 @@ jobs:
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
 
       - name: Build archive (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && startsWith(matrix.id, 'windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           certutil -hashfile "$ARCHIVE.tar.gz" SHA256 > "$ARCHIVE.tar.gz.sha256"
@@ -372,7 +630,7 @@ jobs:
 
       # The zip archive for Windows is created as a convenience to users for manual installations.
       - name: Build .zip archive (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && startsWith(matrix.id, 'windows-') }}
         run: |
           7z a "$ARCHIVE.zip" "$ARCHIVE"
           certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
@@ -384,10 +642,32 @@ jobs:
       #
 
       - name: Test the binary file cpu architecture
+        if: ${{ steps.build_support.outputs.supported == 'true' }}
         run: |
           postgres_file="$INSTALL_DIRECTORY/bin/postgres"
           
-          if [[ "${{ matrix.id }}" == linux-* ]]; then
+          if [[ "${{ matrix.id }}" == windows-* ]]; then
+            postgres_file="$INSTALL_DIRECTORY/bin/postgres.exe"
+            cpu_architecture=$(python - "$postgres_file" <<'PY'
+          import pathlib
+          import struct
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          data = path.read_bytes()
+
+          if data[:2] != b'MZ':
+              raise SystemExit(f"{path} is not a PE executable")
+
+          pe_offset = struct.unpack_from('<I', data, 0x3c)[0]
+          if data[pe_offset:pe_offset + 4] != b'PE\0\0':
+              raise SystemExit(f"{path} is missing a PE header")
+
+          machine = struct.unpack_from('<H', data, pe_offset + 4)[0]
+          print(f"0x{machine:04x}")
+          PY
+            )
+          elif [[ "${{ matrix.id }}" == linux-* ]]; then
             cpu_architecture=$(readelf --file-header "$postgres_file" | grep 'Machine:')
           else
             cpu_architecture=$(file "$postgres_file")
@@ -395,12 +675,20 @@ jobs:
           
           echo "CPU_ARCHITECTURE=$cpu_architecture" | tee -a $GITHUB_ENV
           
-          if [[ "$cpu_architecture" != *"${{ matrix.architecture }}"* ]]; then
-            echo "ERROR: CPU architecture ($cpu_architecture) does not match expected architecture (${{ matrix.architecture }})"
-            exit 1
+          if [[ "${{ matrix.id }}" == windows-* ]]; then
+            if [[ "$cpu_architecture" != "${{ matrix.pe_machine }}" ]]; then
+              echo "ERROR: CPU architecture ($cpu_architecture) does not match expected architecture (${{ matrix.pe_machine }})"
+              exit 1
+            fi
+          else
+            if [[ "$cpu_architecture" != *"${{ matrix.architecture }}"* ]]; then
+              echo "ERROR: CPU architecture ($cpu_architecture) does not match expected architecture (${{ matrix.architecture }})"
+              exit 1
+            fi
           fi
 
       - name: Test build / archive
+        if: ${{ steps.build_support.outputs.supported == 'true' }}
         run: |
           test_directory=$(mktemp -d)
           tar xzf "$ARCHIVE.tar.gz" -C "$test_directory"
@@ -432,7 +720,7 @@ jobs:
           fi
 
       - name: Stage archive artifacts
-        if: ${{ inputs.upload_artifacts == true }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.upload_artifacts == true }}
         run: |
           mkdir -p artifacts
           cp "$ASSET" "$ASSET_SUM" artifacts/
@@ -442,7 +730,7 @@ jobs:
           fi
 
       - name: Upload archive artifacts
-        if: ${{ inputs.upload_artifacts == true }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.upload_artifacts == true }}
         uses: actions/upload-artifact@v7
         with:
           name: postgresql-${{ matrix.id }}
@@ -455,14 +743,14 @@ jobs:
       #
 
       - name: Upload release archive
-        if: ${{ inputs.release == true }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.release == true }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$VERSION" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
 
       - name: Upload release archive (Windows)
-        if: ${{ inputs.release == true && startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.release == true && startsWith(matrix.id, 'windows-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
