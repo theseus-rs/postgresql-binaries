@@ -50,10 +50,30 @@ bundle_lib() {
     # Set the ID of the dylib to be relative
     install_name_tool -id "@loader_path/../lib/$lib_name" "$INSTALL_DIR/lib/$lib_name"
     
-    # Get dependencies and fix them
-    otool -L "$INSTALL_DIR/lib/$lib_name" | grep "$BREW_PREFIX" | awk '{print $1}' | while read -r dep; do
-        local dep_real_path=$(get_realpath "$dep")
+    # Get Homebrew and same-directory dependencies and fix them
+    otool -L "$INSTALL_DIR/lib/$lib_name" | awk 'NR > 1 {print $1}' | while read -r dep; do
+        local dep_path
+        case "$dep" in
+            "$BREW_PREFIX"/*)
+                dep_path="$dep"
+                ;;
+            @loader_path/*|@rpath/*)
+                dep_path="$(dirname "$lib_path")/${dep#*/}"
+                if [ ! -e "$dep_path" ]; then
+                    continue
+                fi
+                ;;
+            *)
+                continue
+                ;;
+        esac
+
         local dep_name=$(basename "$dep")
+        if [ "$dep_name" = "$lib_name" ]; then
+            continue
+        fi
+
+        local dep_real_path=$(get_realpath "$dep_path")
         bundle_lib "$dep_real_path" "$dep_name"
         echo "    Changing dependency $dep to @loader_path/../lib/$dep_name in $lib_name"
         install_name_tool -change "$dep" "@loader_path/../lib/$dep_name" "$INSTALL_DIR/lib/$lib_name"
