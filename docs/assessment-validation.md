@@ -40,8 +40,15 @@ original contributor commit in #22; do not squash it away without agreement.
   case/accent behavior, UTC/New York, pgcrypto/xml2/hstore, LZ4, gzip/Zstandard
   dump/restore, Python SSL/JSON/zlib/decimal and forced LLVM JIT. The ELF audit
   passed and all 31 bundled library records had collected notices. This local
-  root used the current 3.19 patch image, so the pinned 3.19.0 CI gate remains
-  necessary.
+  root used the current 3.19 patch image. Its extracted archive also passed on
+  the pinned Alpine 3.19.0 runtime, including checksum, manifest and SBOM checks;
+  the exact pinned build-image CI gate remains necessary.
+* The ARM64 GNU 18.6 Dockerfile build passed using the pinned Debian 12.4 base.
+  Its archive passed target, checksum, manifest, SBOM and full enabled-feature
+  tests on both the pinned Debian runtime with no system ICU and Ubuntu 24.04
+  with system ICU 74. The archive uses its bundled ICU 72 in both environments.
+  All 34 bundled library records had notices. The tested archive SHA-256 was
+  `ebf136dd5127c42ea4533ef19319cc8ac5932d2420660f8c524f8d70a9569b0e`.
 * The native macOS 18.6 tar archive passed extraction/relocation, checksums,
   per-file manifest and SBOM verification. Safe timezone hardlinks are included
   in the inventory; escaping links and modified inventories are rejected.
@@ -67,8 +74,9 @@ majors. It and each PR's required CI must pass at the final submitted revisions;
 queued, superseded or earlier smoke-test jobs are not final acceptance evidence.
 No issue is marked fixed solely from configuration inspection.
 
-Required checks still include clean GNU execution with a different/no system
-ICU, pinned musl base images, macOS 15 without Homebrew access, Windows tar and
+The local GNU ICU and pinned musl runtime checks above still need coverage
+across the remaining targets and majors. Other checks include the pinned musl
+build images, macOS 15 without Homebrew access, Windows tar and
 zip runtime tests, and the constrained ARM/emulated architecture jobs. Other
 CPU minima remain experimental until their execution evidence is recorded.
 
