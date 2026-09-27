@@ -12,8 +12,11 @@ includes OpenSSL, XML, ICU where enabled, compression libraries, C++ support, an
 Python/LLVM dependencies where enabled. PL/Python also includes its standard
 library. macOS libraries use paths relative to their own loader and are signed
 again after modification. macOS still requires system frameworks/libSystem.
-Windows keeps EDB's dependency and notice files and requires its supported
-Windows/Visual C++ runtime environment.
+Windows keeps EDB's dependency and notice files, detects the Python DLL ABI
+imported by PL/Python, and bundles a matching CPython runtime/standard library.
+Its PE import audit rejects missing non-system DLLs. Unbundled Perl/Tcl modules
+are removed to match the Unix feature selection. Windows and the Visual C++
+runtime remain host prerequisites.
 
 `runtime-dependencies.json` records original library paths, input digests,
 system libraries, and all audited files. `dependency-notices/` preserves

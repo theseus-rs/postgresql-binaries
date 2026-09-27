@@ -5,7 +5,7 @@ script_directory=$(cd "$(dirname "$0")" && pwd)
 source "$script_directory/macos-options.sh"
 cd "$SOURCE_DIRECTORY"
 ./configure "${configure_options[@]}"
-make -j "$(sysctl -n hw.logicalcpu)" "$build_target"
+make -j "${MAKE_JOBS:-$(sysctl -n hw.logicalcpu)}" "$build_target"
 make "$install_target"
 make -C contrib install
 cp COPYRIGHT source-input.json "$INSTALL_DIRECTORY"
