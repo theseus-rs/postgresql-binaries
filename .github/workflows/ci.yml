@@ -5,13 +5,21 @@ on:
     branches:
       - main
   pull_request:
-    branches:
-      - main
 
 permissions:
   contents: read
 
 jobs:
+  regression:
+    name: Regression checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - run: |
+          for script in scripts/*.sh tests/*.sh; do bash -n "$script"; done
+          for test in tests/test-*.sh; do bash "$test"; done
+          python3 -m unittest discover -s tests -p 'test_*.py'
+
   initialize:
     name: Initialize
     runs-on: ubuntu-latest

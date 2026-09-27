@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Get the release version from the tag
         if: env.VERSION == ''
         run: echo "VERSION=${{ github.ref_name }}" | tee -a $GITHUB_ENV
@@ -41,16 +41,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Get the release version from the tag
         if: env.VERSION == ''
         run: echo "VERSION=${{ github.ref_name }}" | tee -a $GITHUB_ENV
       - name: Display the version
         run: |
           echo "version is: $VERSION"
+      - name: Verify complete draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/verify-release.sh "$VERSION" draft
       - name: Publish GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit "${VERSION}" --draft=false
     outputs:
       version: ${{ env.VERSION }}
+
+  verify_public:
+    name: Verify public downloads
+    needs: [publish_release]
+    uses: ./.github/workflows/verify-public.yml
+    with:
+      version: ${{ needs.publish_release.outputs.version }}

@@ -1,10 +1,12 @@
-FROM alpine:3.19.0
+# alpine:3.19.0 (multi-platform index)
+FROM alpine:3.19.0@sha256:51b67269f354137895d43f3b3d810bfacd3945438e94dc5ac55fdac340352f48
 
 ARG POSTGRESQL_VERSION
 
 RUN echo "POSTGRESQL_VERSION=$POSTGRESQL_VERSION"
 RUN apk update
 RUN apk add --no-cache \
+      ca-certificates \
       bash \
       bison \
       clang16 \
@@ -41,14 +43,9 @@ RUN apk add --no-cache \
       zlib-dev \
       zstd-dev
 
-RUN branch=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print "REL_"$1"_"$2}') && \
-    echo "branch=$branch" && \
-    git config --global http.version HTTP/1.1 && \
-    git config --global http.sslVerify false && \
-    for i in $(seq 1 5); do \
-        git clone --depth 1 --branch $branch -c advice.detachedHead=false https://git.postgresql.org/git/postgresql.git /usr/src/postgresql \
-            && break || sleep 3; \
-    done
+COPY scripts/fetch-source.sh /usr/local/bin/fetch-source
+RUN update-ca-certificates && \
+    fetch-source "$POSTGRESQL_VERSION" /usr/src/postgresql
 
 WORKDIR /usr/src/postgresql
 
@@ -85,7 +82,7 @@ RUN cd /opt/postgresql/bin && \
     rpath=$(patchelf --print-rpath postgres | sed 's|/opt/postgresql/lib|$ORIGIN/../lib|g') && \
     find ./ -type f -print0 | while IFS= read -r -d '' file; do patchelf --set-rpath $rpath $file; done
 
-RUN cp /usr/src/postgresql/COPYRIGHT /opt/postgresql
+RUN cp /usr/src/postgresql/COPYRIGHT /usr/src/postgresql/source-input.json /opt/postgresql
 
 # Create user and group for running tests
 RUN addgroup -S -g 1000 postgresql && \
