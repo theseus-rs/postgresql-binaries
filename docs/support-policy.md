@@ -24,8 +24,8 @@ archive verification changes and the 16/17 native tests remain outstanding.
 
 | Family | Build/test baseline | Required host ABI | CPU baseline / evidence limit |
 | --- | --- | --- | --- |
-| Linux GNU | Debian 12.4 base; distro package updates recorded | glibc 2.36 and matching ELF loader | Explicit per-target flags in `targets.json`; ARM32 uses constrained QEMU; other CPU minima need native/emulator evidence |
-| Linux musl | Alpine 3.19.0 base; distro package updates recorded | musl 1.2.4 and matching dynamic ELF loader | Dynamic, not static; i586 and soft-float ARM aliases quarantined |
+| Linux GNU | Debian 12.4 base; distro package updates recorded | glibc 2.36 and matching ELF loader | Explicit flags and constrained QEMU models in `targets.json`; CPU minima require passing execution evidence |
+| Linux musl | Alpine 3.19.0 base; distro package updates recorded | musl 1.2.4 and matching dynamic ELF loader | Constrained QEMU tests; dynamic, not static; i586 and soft-float ARM aliases quarantined |
 | macOS ARM64 / x64 | macOS 15 CI with deployment target 15.0 | macOS system frameworks and libSystem | ARM64 / x86_64; older macOS is not certified |
 | Windows x64 | GitHub Windows runner recorded in provenance; EDB repackaged archive | EDB-supported Windows and Visual C++ runtime | x64; no independently tested minimum Windows version is promised |
 

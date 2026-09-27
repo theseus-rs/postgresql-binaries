@@ -49,6 +49,8 @@ original contributor commit in #22; do not squash it away without agreement.
   with system ICU 74. The archive uses its bundled ICU 72 in both environments.
   All 34 bundled library records had notices. The tested archive SHA-256 was
   `ebf136dd5127c42ea4533ef19319cc8ac5932d2420660f8c524f8d70a9569b0e`.
+  Pinned ARM64 GNU Dockerfile builds, target audits, notices and extracted-archive
+  feature/checksum/manifest/SBOM tests also pass for 14.24, 15.19, 16.15 and 17.11.
 * The native macOS 18.6 tar archive passed extraction/relocation, checksums,
   per-file manifest and SBOM verification. Safe timezone hardlinks are included
   in the inventory; escaping links and modified inventories are rejected.
@@ -87,4 +89,4 @@ and is not added to the advertised release matrix by this series.
 Attestation signing and draft/public release gates require a real authorized
 release run. They have not been exercised by publishing a test release. EDB's
 independent archive-signature/checksum limit remains explicit. See
-[input verification](input-verification.md) and [the release checklist](support-policy.md).
+[provenance](provenance.md) and [the release checklist](support-policy.md).
