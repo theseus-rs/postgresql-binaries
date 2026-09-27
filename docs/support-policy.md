@@ -19,6 +19,8 @@ and EOL as workflow failures; it never creates tags, issues or releases.
 No target is promoted by a configure flag, a file-header match, or this document.
 The implementation series remains under validation until its integration run
 passes. Native Windows ARM64 work in #27 is separate and is not yet advertised.
+Its PostgreSQL 18.6 native smoke test passed, but shared input, dependency and
+archive verification changes and the 16/17 native tests remain outstanding.
 
 | Family | Build/test baseline | Required host ABI | CPU baseline / evidence limit |
 | --- | --- | --- | --- |
@@ -41,13 +43,15 @@ and runtime tests must confirm it for each artifact.
 | --- | --- | --- | --- | --- |
 | ICU, OpenSSL, XML/XSLT, LZ4, readline | All | All | All | Recorded from EDB; exercise available extensions |
 | Zstandard | 16–18 | 16–18 | 16–18 | Upstream-dependent |
-| PL/Python plus standard library | 15–18 | 15–18 | 15–18 | May require EDB Language Pack; not independently bundled |
+| PL/Python plus standard library | 15–18 | 15–18 | 15–18 | Matching CPython ABI detected and bundled; runtime tests required |
 | LLVM JIT | Disabled | 16–18 | 16–18 | Upstream-dependent |
 | PostgreSQL timezone database | All | All | All | Archive must contain its timezone files |
-| LDAP / Perl / Tcl | Disabled | Disabled | Disabled | Upstream-dependent |
+| LDAP | Disabled | Disabled | Disabled | Upstream-dependent |
+| Perl / Tcl PostgreSQL extensions | Disabled | Disabled | Disabled | Removed because their language runtimes are not bundled |
 
 Core SQL, version/encoding, UTC/named timezone behavior, pgcrypto, xml2, hstore,
-ICU collations, and enabled Python/JIT branches are exercised after extraction.
+ICU collations, LZ4 storage, gzip/Zstandard dump/restore, and enabled Python/JIT
+branches are exercised after extraction.
 Full upstream regression suites and every optional extension are not covered.
 
 ## Updates, EOL and packaging revisions
