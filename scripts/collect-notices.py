@@ -18,7 +18,7 @@ alpine_cache = {}
 for item in data["bundled"]:
     source = Path(item["source"])
     paths = []
-    if shutil.which("dpkg-query") and Path("/var/lib/dpkg/status").is_file():
+    if Path("/etc/debian_version").exists() and shutil.which("dpkg-query"):
         # Debian's merged-/usr paths may differ from dpkg's recorded spelling.
         for spelling in [str(source), str(source).removeprefix("/usr")]:
             result = subprocess.run(["dpkg-query", "-S", spelling], capture_output=True, text=True)
