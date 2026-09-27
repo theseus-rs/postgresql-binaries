@@ -6,6 +6,10 @@ and `dependency-notices/`. These record the resolved PostgreSQL source commit,
 source/input digests, checked-out build revision, target, compiler/configure
 settings, generated features, and bundled/system dependency inventory. EDB
 repackages explicitly identify their upstream verification/toolchain limits.
+Source-server authentication uses CA-validated HTTPS; no release-tag signature
+is claimed. EDB provides no independent archive digest/signature at the tested
+download endpoint, so its recorded input hash does not establish independent
+publisher verification.
 
 Each archive has a standard `<sha256>  <filename>` checksum, a `.manifest.json`
 inventory with per-file hashes/symlink targets, and a `.spdx.json` SBOM. The
