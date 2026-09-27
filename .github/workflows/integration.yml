@@ -6,6 +6,10 @@ on:
       - add-release-provenance
   workflow_dispatch:
 
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
