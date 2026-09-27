@@ -31,6 +31,12 @@ def inventory(path):
                     raise ValueError(f"Duplicate archive member: {name}")
                 if entry.issym():
                     records[name] = {"symlink": entry.linkname}
+                elif entry.islnk():
+                    target = PurePosixPath(entry.linkname)
+                    if target.is_absolute() or ".." in target.parts or "\\" in entry.linkname:
+                        raise ValueError("Unsafe archive hardlink")
+                    data = archive.extractfile(entry).read()
+                    records[name] = {"hardlink": entry.linkname, "sha256": sha(data), "size": len(data)}
                 elif entry.isfile():
                     data = archive.extractfile(entry).read()
                     records[name] = {"sha256": sha(data), "size": len(data)}
@@ -55,6 +61,9 @@ def inventory(path):
         path_parts = PurePosixPath(name)
         if path_parts.is_absolute() or ".." in path_parts.parts or "\\" in name:
             raise ValueError("Unsafe archive member")
+        if "hardlink" in record and (record["hardlink"] not in records or
+                                      PurePosixPath(record["hardlink"]).parts[0] != path_parts.parts[0]):
+            raise ValueError("Hardlink escapes installation")
         if "symlink" in record:
             link = PurePosixPath(record["symlink"])
             parts = list(path_parts.parent.parts)
