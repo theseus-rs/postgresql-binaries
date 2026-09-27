@@ -16,11 +16,15 @@ cd "$test_directory/bin"
 test "$(./postgres --version)" = "postgres (PostgreSQL) $postgresql_version"
 ./initdb -A trust -U postgres -D "$data_directory" -E UTF8
 cleanup() {
+    status=$?
+    if [ "$status" -ne 0 ] && [ -f "$data_directory/server.log" ]; then
+        cat "$data_directory/server.log" >&2
+    fi
     ./pg_ctl -w -D "$data_directory" stop >/dev/null 2>&1 || true
     rm -rf "$data_directory"
 }
 trap cleanup EXIT
-./pg_ctl -w -D "$data_directory" -l "$data_directory/server.log" -o "-p "$port" -F -h 127.0.0.1" start
+./pg_ctl -w -D "$data_directory" -l "$data_directory/server.log" -o "-p $port -F -h 127.0.0.1" start
 
 # The relocated install must carry its own tzdata.
 test -f ../share/timezone/UTC || test -f ../share/postgresql/timezone/UTC

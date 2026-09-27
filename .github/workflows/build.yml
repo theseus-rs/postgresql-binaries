@@ -260,6 +260,7 @@ jobs:
           unzip postgresql.zip
           rm -rf pgsql/pgAdmin*
           mv pgsql "$INSTALL_DIRECTORY"
+          cp "$INSTALL_DIRECTORY/LICENSE" "$INSTALL_DIRECTORY/COPYRIGHT"
           cp windows-input.json "$INSTALL_DIRECTORY/source-input.json"
 
       - name: Detect EDB Python ABI
