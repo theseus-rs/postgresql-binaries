@@ -26,6 +26,13 @@ def pe_with_import(name):
 
 
 class WindowsRuntimeTests(unittest.TestCase):
+    def test_delay_load_imports_are_audited(self):
+        data = bytearray(pe_with_import("python313.dll"))
+        struct.pack_into("<I", data, 0x98 + 112 + 13 * 8, 0x1080)
+        struct.pack_into("<II", data, 640, 1, 0x1140)
+        data[832:844] = b"missing.dll\0"
+        self.assertEqual(module.imports(data), ["python313.dll", "missing.dll"])
+
     def test_python_abi_from_import_table(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

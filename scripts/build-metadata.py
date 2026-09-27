@@ -45,7 +45,7 @@ else:
     result["runtime"] = json.loads((root / "runtime-dependencies.json").read_text())
     result["runtime"]["verification_limit"] = "EDB upstream compiler/input authentication limits remain; DLL closure is audited"
 
-if shutil.which("dpkg-query") and Path("/var/lib/dpkg/status").exists():
+if Path("/etc/debian_version").exists() and shutil.which("dpkg-query"):
     result["toolchain"]["installed_packages"] = subprocess.check_output(["dpkg-query", "-W", "-f=${Package} ${Version}\n"], text=True).splitlines()
 elif shutil.which("apk"):
     result["toolchain"]["installed_packages"] = subprocess.check_output(["apk", "info", "-v"], text=True).splitlines()

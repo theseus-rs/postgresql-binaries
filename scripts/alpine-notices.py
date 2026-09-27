@@ -78,7 +78,7 @@ def collect(package, destination):
                 output.write_bytes(data)
                 count += 1
             def notice(member_name):
-                return PurePosixPath(member_name).name.upper().startswith(("COPYING", "COPYRIGHT", "LICENSE", "NOTICE", "AUTHORS"))
+                return PurePosixPath(member_name).name.upper().startswith(("COPYING", "COPYRIGHT", "LICENSE", "LICENCE", "NOTICE", "AUTHORS"))
             if tarfile.is_tarfile(archive):
                 with tarfile.open(archive) as tar:
                     for entry in tar:

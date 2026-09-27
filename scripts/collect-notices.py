@@ -18,7 +18,7 @@ alpine_cache = {}
 for item in data["bundled"]:
     source = Path(item["source"])
     paths = []
-    if shutil.which("dpkg-query") and Path("/var/lib/dpkg/status").is_file():
+    if Path("/etc/debian_version").exists() and shutil.which("dpkg-query"):
         # Debian's merged-/usr paths may differ from dpkg's recorded spelling.
         for spelling in [str(source), str(source).removeprefix("/usr")]:
             result = subprocess.run(["dpkg-query", "-S", spelling], capture_output=True, text=True)
@@ -35,7 +35,7 @@ for item in data["bundled"]:
                 item["package"] = parent.parent.name
                 item["package_version"] = parent.name
                 paths = [p for p in parent.rglob("*") if p.is_file() and
-                         p.name.upper().startswith(("LICENSE", "COPYING", "NOTICE", "COPYRIGHT"))]
+                         p.name.upper().startswith(("LICENSE", "LICENCE", "COPYING", "NOTICE", "COPYRIGHT"))]
                 break
     else:
         result = subprocess.run(["apk", "info", "--who-owns", str(source)], capture_output=True, text=True, check=True)
