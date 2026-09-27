@@ -27,7 +27,13 @@ Compiler baseline flags are explicit. ARM32 tests use x86 runners and QEMU CPU
 models (arm926, arm1176, cortex-a7) so an ARM64 host cannot silently bypass CPU
 emulation. ARM attributes may include higher-ISA runtime-dispatched routines;
 they are retained as evidence rather than treated as proof of minimum CPU.
-Non-ARM CPU minima still require hardware/emulator execution before promotion.
+MIPS, PowerPC and s390x runtime tests likewise request MIPS64R2-generic, power8
+and z196 models from the pinned emulator image. x86 Linux builds/tests use ARM
+runners so emulation cannot be bypassed by the host kernel: qemu64 with SSE3,
+CX16 and LAHF-LM disabled for the x86-64 baseline; qemu32 with SSE3 disabled for
+i686/SSE2. These models were checked against the pinned image, including Linux
+loader startup for the x86 models. Full archive execution must pass before
+promotion; loader startup alone does not establish the CPU minimum.
 
 macOS checks Mach-O architecture and a deployment minimum no newer than 15.0.
 Windows checks PE machine types. [PR #27](https://github.com/theseus-rs/postgresql-binaries/pull/27)
