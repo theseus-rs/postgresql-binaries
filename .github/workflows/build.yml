@@ -316,7 +316,7 @@ jobs:
       - name: Build archive (Linux, MacOS)
         if: ${{ !startsWith(matrix.id, 'windows-') }}
         run: |
-          tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+          COPYFILE_DISABLE=1 tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           python3 scripts/checksum.py "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
           echo "ASSET=$ARCHIVE.tar.gz" | tee -a $GITHUB_ENV
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
