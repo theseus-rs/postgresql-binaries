@@ -163,6 +163,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Download and execute public archive
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
           TARGET: ${{ matrix.target }}
           PLATFORM: ${{ matrix.platform }}
@@ -180,10 +181,12 @@ jobs:
           if [[ "$TARGET" == *windows* ]]; then extensions+=(zip); fi
           for extension in "${extensions[@]}"; do
             asset="postgresql-$VERSION-$TARGET.$extension"
-            for file in "$asset" "$asset.sha256"; do
+            for file in "$asset" "$asset.sha256" "$asset.manifest.json" "$asset.spdx.json"; do
               curl --fail --location --silent --show-error --retry 3 \
                 --proto '=https' --proto-redir '=https' \
                 "https://github.com/$GITHUB_REPOSITORY/releases/download/$VERSION/$file" -o "$file"
             done
+            python3 scripts/archive-manifest.py verify "$asset"
+            gh attestation verify "$asset" --repo "$GITHUB_REPOSITORY"
             ./scripts/test-archive.sh "$asset" "$VERSION"
           done

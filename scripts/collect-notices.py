@@ -6,12 +6,14 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import importlib.util
 
 root = Path(sys.argv[1])
 data = json.loads((root / "runtime-dependencies.json").read_text())
 notices = root / "dependency-notices"
 notices.mkdir(exist_ok=True)
 missing = []
+alpine_cache = {}
 for item in data["bundled"]:
     source = Path(item["source"])
     paths = []
@@ -37,7 +39,18 @@ for item in data["bundled"]:
     else:
         result = subprocess.run(["apk", "info", "--who-owns", str(source)], capture_output=True, text=True, check=True)
         item["package"] = result.stdout.strip().split(" owned by ")[-1]
-        paths = list(Path("/usr/share/licenses").glob("**/*")) if Path("/usr/share/licenses").exists() else []
+        package = item["package"]
+        try:
+            if package not in alpine_cache:
+                spec = importlib.util.spec_from_file_location("alpine_notices", Path(__file__).with_name("alpine-notices.py"))
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                alpine_cache[package] = module.collect(package, notices / package)
+            item.update(alpine_cache[package])
+            continue
+        except (OSError, ValueError, subprocess.CalledProcessError) as error:
+            print(f"Cannot collect {package} source notices: {error}", file=sys.stderr)
+            paths = []
     paths = [p for p in paths if p.is_file()]
     if not paths:
         missing.append(item["file"])

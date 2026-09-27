@@ -25,9 +25,9 @@ for target in $targets; do
         asset="postgresql-$version-$target.$extension"
         if [ "$mode" = draft ]; then
             gh release download "$version" --repo "$repository" --dir "$temporary" \
-                --pattern "$asset" --pattern "$asset.sha256"
+                --pattern "$asset" --pattern "$asset.sha256" --pattern "$asset.manifest.json" --pattern "$asset.spdx.json"
         else
-            for file in "$asset" "$asset.sha256"; do
+            for file in "$asset" "$asset.sha256" "$asset.manifest.json" "$asset.spdx.json"; do
                 curl --fail --location --silent --show-error --retry 3 \
                     --proto '=https' --proto-redir '=https' \
                     "https://github.com/$repository/releases/download/$version/$file" \
@@ -35,6 +35,8 @@ for target in $targets; do
             done
         fi
         python3 "$root/scripts/verify-checksum.py" "$temporary/$asset" "$temporary/$asset.sha256"
+        python3 "$root/scripts/archive-manifest.py" verify "$temporary/$asset"
+        gh attestation verify "$temporary/$asset" --repo "$repository"
         if [ "$extension" = tar.gz ]; then tar tzf "$temporary/$asset" >/dev/null; fi
     done
 done
