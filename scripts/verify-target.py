@@ -39,8 +39,11 @@ def validate(info, target, executable=False):
             raise ValueError("ARM EABI5 required")
         if bool(info["flags"] & 0x400) != (target["float_abi"] == "hard"):
             raise ValueError("ARM float ABI mismatch")
-    if info["machine"] == 8 and info["flags"] & 0x20:
-        raise ValueError("MIPS N32 is incompatible with the advertised N64 ABI")
+    if info["machine"] == 8:
+        if info["flags"] & (0xf000 | 0x20):
+            raise ValueError("MIPS requires the N64 ABI, not N32/O32/O64/EABI")
+        if info["flags"] & 0xf0000000 > 0x80000000:
+            raise ValueError("MIPS ISA exceeds the MIPS64r2 baseline")
     if info["machine"] == 21 and info["flags"] & 3 != 2:
         raise ValueError("PowerPC64 ELFv2 ABI required")
 

@@ -26,17 +26,19 @@ jobs:
         include:
           - id: linux-arm64
             target: "aarch64-unknown-linux-gnu"
-            os: "ubuntu-24.04-arm"
+            os: "ubuntu-latest"
             platform: "linux/arm64/v8"
             architecture: "AArch64"
             cflags: "-O2 -march=armv8-a"
+            qemu_cpu: "cortex-a53"
 
           - id: linux-arm64-musl
             target: "aarch64-unknown-linux-musl"
-            os: "ubuntu-24.04-arm"
+            os: "ubuntu-latest"
             platform: "linux/arm64/v8"
             architecture: "AArch64"
             cflags: "-O2 -march=armv8-a"
+            qemu_cpu: "cortex-a53"
 
           - id: linux-arm
             target: "arm-unknown-linux-gnueabi"
@@ -80,31 +82,35 @@ jobs:
 
           - id: linux-x64
             target: "x86_64-unknown-linux-gnu"
-            os: "ubuntu-latest"
+            os: "ubuntu-24.04-arm"
             platform: "linux/amd64"
             architecture: "Advanced Micro Devices X86-64"
             cflags: "-O2 -march=x86-64"
+            qemu_cpu: "qemu64,-sse3,-cx16,-lahf-lm"
 
           - id: linux-x64-musl
             target: "x86_64-unknown-linux-musl"
-            os: "ubuntu-latest"
+            os: "ubuntu-24.04-arm"
             platform: "linux/amd64"
             architecture: "Advanced Micro Devices X86-64"
             cflags: "-O2 -march=x86-64"
+            qemu_cpu: "qemu64,-sse3,-cx16,-lahf-lm"
 
           - id: linux-x86
             target: "i686-unknown-linux-gnu"
-            os: "ubuntu-latest"
+            os: "ubuntu-24.04-arm"
             platform: "linux/386"
             architecture: "Intel 80386"
             cflags: "-O2 -march=i686 -msse2 -mfpmath=sse"
+            qemu_cpu: "qemu32,-sse3"
 
           - id: linux-x86-musl
             target: "i686-unknown-linux-musl"
-            os: "ubuntu-latest"
+            os: "ubuntu-24.04-arm"
             platform: "linux/386"
             architecture: "Intel 80386"
             cflags: "-O2 -march=i686 -msse2 -mfpmath=sse"
+            qemu_cpu: "qemu32,-sse3"
 
           - id: linux-mips64le
             target: "mips64el-unknown-linux-gnuabi64"
@@ -112,6 +118,7 @@ jobs:
             platform: "linux/mips64le"
             architecture: "MIPS R3000"
             cflags: "-O2 -march=mips64r2"
+            qemu_cpu: "MIPS64R2-generic"
 
           - id: linux-powerpc64el
             target: "powerpc64le-unknown-linux-gnu"
@@ -119,6 +126,7 @@ jobs:
             platform: "linux/ppc64le"
             architecture: "PowerPC64"
             cflags: "-O2 -mcpu=power8"
+            qemu_cpu: "power8"
 
           - id: linux-powerpc64el-musl
             target: "powerpc64le-unknown-linux-musl"
@@ -126,6 +134,7 @@ jobs:
             platform: "linux/ppc64le"
             architecture: "PowerPC64"
             cflags: "-O2 -mcpu=power8"
+            qemu_cpu: "power8"
 
           - id: linux-s390x
             target: "s390x-unknown-linux-gnu"
@@ -133,6 +142,7 @@ jobs:
             platform: "linux/s390x"
             architecture: "IBM S/390"
             cflags: "-O2 -march=z196"
+            qemu_cpu: "z196"
 
           - id: linux-s390x-musl
             target: "s390x-unknown-linux-musl"
@@ -140,6 +150,7 @@ jobs:
             platform: "linux/s390x"
             architecture: "IBM S/390"
             cflags: "-O2 -march=z196"
+            qemu_cpu: "z196"
 
           - id: macos-arm64
             target: "aarch64-apple-darwin"
