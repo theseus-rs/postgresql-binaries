@@ -21,7 +21,9 @@ if [[ "$TARGET" == *linux* ]]; then
     docker run --rm --platform "$PLATFORM" --user nobody \
         --volume "$temporary/$archive:/opt/test:ro" \
         --tmpfs /usr/share/zoneinfo:ro --tmpfs /tmp:mode=1777 "$RUNTIME_IMAGE" \
-        /bin/bash -c 'cd /opt/test && ./test.sh "$1"' bash "$version"
+        /bin/sh -c 'cd /opt/test && sh ./test.sh "$1"' sh "$version"
+elif [[ "$TARGET" == *apple* ]]; then
+    (cd "$temporary/$archive" && sandbox-exec -p '(version 1)(allow default)(deny file-read* (subpath "/opt/homebrew") (subpath "/usr/local") (subpath "/usr/share/zoneinfo"))' /bin/bash ./test.sh "$version")
 else
     (cd "$temporary/$archive" && ./test.sh "$version")
 fi

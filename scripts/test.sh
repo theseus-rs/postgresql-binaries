@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -eu
 
-[[ "${1:-}" =~ ^(14|15|16|17|18)\.[0-9]+\.[0-9]+$ ]]
+printf '%s\n' "${1:-}" | grep -Eq '^(14|15|16|17|18)\.[0-9]+\.[0-9]+$'
 
 postgresql_version=$(echo "$1" | awk -F. '{print ""$1"."$2}')
-version_num=$(awk -F. '{printf "%d%04d", $1, $2}' <<< "$1")
+version_num=$(printf '%s\n' "$1" | awk -F. '{printf "%d%04d", $1, $2}')
 port=${PGTEST_PORT:-65432}
 test_directory="$(pwd)"
 data_directory="$(mktemp -d)"
@@ -31,6 +31,23 @@ query "SET TIME ZONE 'UTC'"
 query "SET TIME ZONE 'America/New_York'"
 test "$(query "SELECT extract(hour FROM timestamp '2026-01-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 7
 test "$(query "SELECT extract(hour FROM timestamp '2026-07-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 8
+
+# Exercise libraries loaded only by extensions, not just postgres itself.
+query "CREATE EXTENSION pgcrypto; SELECT encode(digest('portable', 'sha256'), 'hex')"
+query "CREATE EXTENSION xml2; SELECT xml_is_well_formed('<portable/>')"
+query "CREATE EXTENSION hstore; SELECT 'a=>b'::hstore -> 'a'"
+if find ../lib -name 'plpython3.*' | grep -q .; then
+    query "CREATE EXTENSION plpython3u"
+    query 'CREATE FUNCTION portable_python() RETURNS text LANGUAGE plpython3u AS $$
+import ssl, json, zlib, decimal
+return json.dumps({"value": str(decimal.Decimal("1.25"))})
+$$'
+    test "$(query 'SELECT portable_python()')" = '{"value": "1.25"}'
+fi
+if find ../lib -name 'llvmjit.*' | grep -q .; then
+    test "$(query 'SELECT pg_jit_available()')" = t
+    query 'SET jit = on; SET jit_above_cost = 0; SELECT sum(i) FROM generate_series(1, 100) i'
+fi
 
 echo "Running tests..."
 set -x

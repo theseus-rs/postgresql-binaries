@@ -76,11 +76,10 @@ RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
     make $([ $major_version -ge 15 ] && echo "install-world-bin" || echo "install") && \
     make -C contrib install
 
-# Update binary rpath to use a relative path.
-# LD_FLAGS=-Wl,-rpath,'$ORIGIN/../lib' should be used instead, but does not appear to work.
-RUN cd /opt/postgresql/bin && \
-    rpath=$(patchelf --print-rpath postgres | sed 's|/opt/postgresql/lib|$ORIGIN/../lib|g') && \
-    find ./ -type f -print0 | while IFS= read -r -d '' file; do patchelf --set-rpath $rpath $file; done
+# Audit executables, extension modules, and their transitive dependencies.
+COPY scripts/bundle-runtime.py scripts/collect-notices.py /usr/local/bin/
+RUN python3 /usr/local/bin/bundle-runtime.py /opt/postgresql && \
+    python3 /usr/local/bin/collect-notices.py /opt/postgresql
 
 RUN cp /usr/src/postgresql/COPYRIGHT /usr/src/postgresql/source-input.json /opt/postgresql
 

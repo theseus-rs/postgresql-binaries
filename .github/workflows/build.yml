@@ -298,13 +298,23 @@ jobs:
         if: ${{ startsWith(matrix.id, 'windows-') }}
         run: |
           unzip postgresql.zip
-          rm -rf pgsql/doc pgsql/pgAdmin*
+          rm -rf pgsql/pgAdmin*
           mv pgsql "$INSTALL_DIRECTORY"
           cp windows-input.json "$INSTALL_DIRECTORY/source-input.json"
 
       #
       # Package
       #
+
+      - name: Check redistribution notices
+        if: ${{ inputs.release == true && !startsWith(matrix.id, 'windows-') }}
+        run: |
+          python3 - "$INSTALL_DIRECTORY/runtime-dependencies.json" <<'PYTHON'
+          import json, sys
+          data = json.load(open(sys.argv[1]))
+          if data.get("missing_notices"):
+              raise SystemExit("Release blocked: dependency notices are incomplete")
+          PYTHON
 
       - name: Prepare archive
         run: |
@@ -363,8 +373,12 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           PLATFORM: ${{ matrix.platform }}
-          RUNTIME_IMAGE: postgresql-build:latest
         run: |
+          if [[ "$TARGET" == *musl* ]]; then
+            export RUNTIME_IMAGE=alpine:3.19.0@sha256:51b67269f354137895d43f3b3d810bfacd3945438e94dc5ac55fdac340352f48
+          elif [[ "$TARGET" == *linux* ]]; then
+            export RUNTIME_IMAGE=debian:12.4@sha256:79becb70a6247d277b59c09ca340bbe0349af6aacb5afa90ec349528b53ce2c9
+          fi
           ./scripts/test-archive.sh "$ASSET" "$VERSION"
           cp "$ASSET_SUM" "$ASSET.tested.sha256"
           if [ -n "${WINDOWS_ASSET:-}" ]; then
