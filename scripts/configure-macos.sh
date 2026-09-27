@@ -5,6 +5,8 @@ set -euo pipefail
 : "${VERSION:?VERSION is required}"
 # Hosted Intel runners preinstall Python framework symlinks in /usr/local.
 # Overwrite those links while retaining the installed framework files.
+# Install LLVM's Python dependency explicitly so --overwrite also applies to it.
+brew install --overwrite python@3.12
 brew install --overwrite fop icu4c libxml2 libxslt llvm@16 lz4 openssl@3 pkgconf python@3.13 readline zstd
 cppflags=""
 ldflags=""
