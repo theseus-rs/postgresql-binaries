@@ -15,8 +15,7 @@ for feature in USE_ICU USE_LZ4 USE_OPENSSL USE_LIBXML USE_LIBXSLT; do
     grep -q "^#define $feature 1$" src/include/pg_config.h
 done
 if [ "$major_version" -ge 15 ]; then
-    test -f "$INSTALL_DIRECTORY/lib/postgresql/plpython3.so" ||
-        test -f "$INSTALL_DIRECTORY/lib/plpython3.so"
+    find "$INSTALL_DIRECTORY/lib" -type f \( -name plpython3.so -o -name plpython3.dylib \) | grep -q .
 fi
 if [ "$major_version" -ge 16 ]; then
     grep -q '^#define USE_LLVM 1$' src/include/pg_config.h

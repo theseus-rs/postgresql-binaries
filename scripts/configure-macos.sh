@@ -3,7 +3,9 @@
 set -euo pipefail
 : "${GITHUB_ENV:?GITHUB_ENV is required}"
 : "${VERSION:?VERSION is required}"
-brew install fop icu4c libxml2 libxslt llvm@16 lz4 openssl@3 pkgconf python@3.13 readline zstd
+# Hosted Intel runners preinstall Python framework symlinks in /usr/local.
+# Overwrite those links while retaining the installed framework files.
+brew install --overwrite fop icu4c libxml2 libxslt llvm@16 lz4 openssl@3 pkgconf python@3.13 readline zstd
 cppflags=""
 ldflags=""
 pkg_config_path=""
