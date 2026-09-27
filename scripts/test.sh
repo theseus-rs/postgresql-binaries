@@ -20,7 +20,7 @@ cleanup() {
     rm -rf "$data_directory"
 }
 trap cleanup EXIT
-./pg_ctl -w -D "$data_directory" -l "$data_directory/server.log" -o "-p "$port" -F -h 127.0.0.1" start
+./pg_ctl -w -D "$data_directory" -l "$data_directory/server.log" -o "-p $port -F -h 127.0.0.1" start
 
 # The relocated install must carry its own tzdata.
 test -f ../share/timezone/UTC || test -f ../share/postgresql/timezone/UTC
