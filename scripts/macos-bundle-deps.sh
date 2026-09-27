@@ -47,9 +47,17 @@ bundle_lib() {
     # Set the ID of the dylib to be relative
     install_name_tool -id "@loader_path/../lib/$lib_name" "$INSTALL_DIR/lib/$lib_name"
     
-    # Get dependencies and fix them
-    otool -L "$INSTALL_DIR/lib/$lib_name" | grep "$BREW_PREFIX" | awk '{print $1}' | while read -r dep; do
-        local dep_real_path=$(get_realpath "$dep")
+    # Resolve relative dependencies from the original library's directory before
+    # relocating it. Homebrew ICU uses these for its transitive data library.
+    otool -L "$lib_path" | tail -n +2 | awk '{print $1}' | while read -r dep; do
+        local dep_path
+        case "$dep" in
+            "$BREW_PREFIX"/*) dep_path="$dep" ;;
+            @loader_path/*) dep_path="$(dirname "$lib_path")/${dep#@loader_path/}" ;;
+            *) continue ;;
+        esac
+        local dep_real_path
+        dep_real_path=$(get_realpath "$dep_path")
         bundle_lib "$dep_real_path" "$(basename "$dep")"
         local dep_name=$(basename "$dep")
         echo "    Changing dependency $dep to @loader_path/../lib/$dep_name in $lib_name"
