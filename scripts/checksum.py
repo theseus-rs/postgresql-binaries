@@ -7,6 +7,9 @@ import sys
 
 for argument in sys.argv[1:]:
     path = Path(argument)
+    digest = hashlib.sha256()
     with path.open("rb") as stream:
-        digest = hashlib.file_digest(stream, "sha256").hexdigest()
-    print(f"{digest}  {path.name}")
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    # Emit the same LF-delimited bytes even under Windows Python 3.9.
+    sys.stdout.buffer.write(f"{digest.hexdigest()}  {path.name}\n".encode("utf-8"))
