@@ -10,7 +10,13 @@ The bundler scans executables and loadable modules recursively, copies their
 non-system library closure, and gives each ELF object a relative RUNPATH. This
 includes OpenSSL, XML, ICU where enabled, compression libraries, C++ support, and
 Python/LLVM dependencies where enabled. PL/Python also includes its standard
-library. macOS libraries use paths relative to their own loader and are signed
+library. Linux PL/Python uses a small recorded source patch to default `PYTHONHOME`
+to the installation containing the running PostgreSQL executable. It finds the
+standard library after relocation without user setup or a system Python; an
+explicitly supplied `PYTHONHOME` still overrides this default.
+The original upstream source digest and before/after patch digests are retained.
+See [Python's initialization API](https://docs.python.org/3.11/c-api/init_config.html).
+macOS libraries use paths relative to their own loader and are signed
 again after modification. macOS still requires system frameworks/libSystem.
 Windows keeps EDB's dependency and notice files, detects the Python DLL ABI
 imported by PL/Python, and bundles a matching CPython runtime/standard library.
