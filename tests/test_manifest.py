@@ -27,6 +27,13 @@ class ManifestTests(unittest.TestCase):
                 tar.addfile(link)
             module.generate(asset)
             module.verify(asset)
+            sbom_path = Path(str(asset) + ".spdx.json")
+            sbom = json.loads(sbom_path.read_text())
+            sbom["packages"][0]["versionInfo"] = "0.0"
+            sbom_path.write_text(json.dumps(sbom))
+            with self.assertRaises(ValueError):
+                module.verify(asset)
+            module.generate(asset)
             manifest_path = Path(str(asset) + ".manifest.json")
             manifest = json.loads(manifest_path.read_text())
             manifest["files"] = {}

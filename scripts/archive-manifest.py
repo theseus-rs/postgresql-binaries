@@ -67,7 +67,7 @@ def inventory(path):
         if "symlink" in record:
             link = PurePosixPath(record["symlink"])
             parts = list(path_parts.parent.parts)
-            if link.is_absolute():
+            if link.is_absolute() or "\\" in record["symlink"]:
                 raise ValueError("Absolute archive symlink")
             for part in link.parts:
                 if part == "..":
@@ -81,17 +81,15 @@ def inventory(path):
     return records, json.loads(next(iter(contents.values())))
 
 
-def generate(asset):
-    files, build = inventory(asset)
+def validate_identity(asset, files, build):
     prefix = f"postgresql-{build['version']}-{build['target']}/"
     if any(not name.startswith(prefix) for name in files):
         raise ValueError("Archive root does not match its build manifest")
     if asset.name not in (prefix[:-1] + ".tar.gz", prefix[:-1] + ".zip"):
         raise ValueError("Asset filename does not match the embedded version/target")
-    manifest = {"schema_version": 1, "archive": asset.name,
-                "sha256": file_sha(asset),
-                "build": build, "files": files}
-    Path(str(asset) + ".manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+
+def dependencies(build):
     packages = [{"SPDXID": "SPDXRef-PostgreSQL", "name": "PostgreSQL", "versionInfo": build["version"].rsplit(".", 1)[0],
                  "downloadLocation": build["source"]["url"], "filesAnalyzed": False,
                  "licenseConcluded": "NOASSERTION", "licenseDeclared": "PostgreSQL", "copyrightText": "NOASSERTION"}]
@@ -103,6 +101,17 @@ def generate(asset):
                          "downloadLocation": "NOASSERTION", "filesAnalyzed": False,
                          "licenseConcluded": "NOASSERTION", "licenseDeclared": "NOASSERTION", "copyrightText": "NOASSERTION"})
         relations.append({"spdxElementId": "SPDXRef-PostgreSQL", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": identifier})
+    return packages, relations
+
+
+def generate(asset):
+    files, build = inventory(asset)
+    validate_identity(asset, files, build)
+    manifest = {"schema_version": 1, "archive": asset.name,
+                "sha256": file_sha(asset),
+                "build": build, "files": files}
+    Path(str(asset) + ".manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    packages, relations = dependencies(build)
     sbom = {"spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0", "SPDXID": "SPDXRef-DOCUMENT",
             "name": asset.name, "documentNamespace": f"https://github.com/theseus-rs/postgresql-binaries/sbom/{manifest['sha256']}",
             "creationInfo": {"created": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -120,9 +129,13 @@ def verify(asset):
     if manifest["archive"] != asset.name or manifest["sha256"] != file_sha(asset):
         raise ValueError("Manifest archive digest/name mismatch")
     files, build = inventory(asset)
+    validate_identity(asset, files, build)
     if files != manifest["files"] or build != manifest["build"]:
         raise ValueError("Manifest does not describe the actual archive")
     sbom = json.loads(Path(str(asset) + ".spdx.json").read_text())
+    packages, relations = dependencies(build)
+    if sbom["packages"] != packages or sbom["relationships"] != relations:
+        raise ValueError("SBOM dependency inventory mismatch")
     actual_files = {f["fileName"]: f["checksums"][0]["checksumValue"] for f in sbom["files"]}
     if actual_files != {name: record["sha256"] for name, record in files.items() if "sha256" in record}:
         raise ValueError("SBOM file inventory mismatch")
