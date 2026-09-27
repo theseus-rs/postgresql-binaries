@@ -18,7 +18,14 @@ def run(*args):
 
 def is_binary(path, magic):
     with path.open("rb") as stream:
-        return stream.read(4) in magic
+        header = stream.read(20)
+    if header[:4] not in magic:
+        return False
+    if header[:4] == b"\x7fELF":
+        # Development objects (e.g. Python's config directory) have no dynamic
+        # loader/RPATH. Only executables and shared modules need rewriting.
+        return int.from_bytes(header[16:18], "little" if header[5] == 1 else "big") in (2, 3)
+    return True
 
 
 def system_library(name, macos=False):
@@ -43,7 +50,7 @@ def bundle(root, macos):
     if any(p.name.startswith("plpython") for p in initial):
         stdlib = Path(sysconfig.get_path("stdlib"))
         shutil.copytree(stdlib, library_dir / stdlib.name, dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns("site-packages", "dist-packages", "__pycache__", "test", "tests"))
+                        ignore=shutil.ignore_patterns("site-packages", "dist-packages", "__pycache__", "test", "tests", "config-*"))
         initial = [p for p in root.rglob("*") if p.is_file() and not p.is_symlink() and is_binary(p, magic)]
         for p in initial:
             if p.is_relative_to(library_dir / stdlib.name):
