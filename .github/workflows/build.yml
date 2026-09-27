@@ -275,6 +275,22 @@ jobs:
           mv pgsql "$INSTALL_DIRECTORY"
           cp windows-input.json "$INSTALL_DIRECTORY/source-input.json"
 
+      - name: Detect EDB Python ABI
+        if: ${{ startsWith(matrix.id, 'windows-') }}
+        id: windows_python
+        run: python3 scripts/windows-runtime.py detect "$INSTALL_DIRECTORY" >> "$GITHUB_OUTPUT"
+
+      - name: Install matching Windows Python
+        if: ${{ startsWith(matrix.id, 'windows-') }}
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ steps.windows_python.outputs.version }}
+          architecture: x64
+
+      - name: Bundle and audit Windows runtime
+        if: ${{ startsWith(matrix.id, 'windows-') }}
+        run: python scripts/windows-runtime.py bundle "$INSTALL_DIRECTORY"
+
       #
       # Package
       #
