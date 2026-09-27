@@ -21,6 +21,10 @@ class ManifestTests(unittest.TestCase):
                 entry = tarfile.TarInfo("postgresql-18.6.0-test/build-manifest.json")
                 entry.size = len(data)
                 tar.addfile(entry, io.BytesIO(data))
+                link = tarfile.TarInfo("postgresql-18.6.0-test/timezone-alias")
+                link.type = tarfile.LNKTYPE
+                link.linkname = entry.name
+                tar.addfile(link)
             module.generate(asset)
             module.verify(asset)
             manifest_path = Path(str(asset) + ".manifest.json")
