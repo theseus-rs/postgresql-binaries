@@ -17,3 +17,8 @@ result.
 Bundling fixes library resolution, not changes in collation semantics across ICU
 upgrades. Review PostgreSQL collation version warnings and reindex affected
 indexes when upgrading an existing database to a different bundled ICU version.
+
+Alpine packages ICU data as a separate archive and ships a stub data library.
+The build embeds the full matching data archive into a relative-loadable ICU
+data library, recording the input digest in `icu-data-input.json`; it does not
+require an `ICU_DATA` environment variable or `/usr/share/icu` at runtime.
