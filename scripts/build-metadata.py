@@ -42,8 +42,9 @@ if "windows" not in target:
     result["toolchain"]["compiler_version"] = subprocess.check_output(["cc", "--version"], text=True).splitlines()[0]
     result["runtime"] = json.loads((root / "runtime-dependencies.json").read_text())
 else:
-    result["runtime"] = {"system": ["Windows x64", "EDB-compatible Visual C++ runtime"],
-                         "verification_limit": "EDB dependency closure and upstream toolchain are not independently rebuilt"}
+    result["runtime"] = json.loads((root / "runtime-dependencies.json").read_text())
+    result["runtime"]["verification_limit"] = "EDB upstream compiler/input authentication limits remain; DLL closure is audited"
+
 if shutil.which("dpkg-query") and Path("/var/lib/dpkg/status").exists():
     result["toolchain"]["installed_packages"] = subprocess.check_output(["dpkg-query", "-W", "-f=${Package} ${Version}\n"], text=True).splitlines()
 elif shutil.which("apk"):
