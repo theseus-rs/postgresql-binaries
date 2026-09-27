@@ -237,6 +237,12 @@ jobs:
           ./scripts/fetch-source.sh "$VERSION" "$source_directory"
           echo "SOURCE_DIRECTORY=$source_directory" | tee -a $GITHUB_ENV
 
+      - name: Test macOS build helpers
+        if: ${{ startsWith(matrix.id, 'macos-') }}
+        run: |
+          bash tests/test-macos-options.sh
+          bash tests/test-macos-symlinks.sh
+
       - name: Configure build (MacOS)
         if: ${{ startsWith(matrix.id, 'macos-') }}
         run: |
