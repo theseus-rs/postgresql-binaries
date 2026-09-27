@@ -323,7 +323,7 @@ jobs:
         if: ${{ !startsWith(matrix.id, 'windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
-          shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+          python3 scripts/checksum.py "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
           echo "ASSET=$ARCHIVE.tar.gz" | tee -a $GITHUB_ENV
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
 
@@ -331,7 +331,7 @@ jobs:
         if: ${{ startsWith(matrix.id, 'windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
-          shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+          python3 scripts/checksum.py "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
           echo "ASSET=$ARCHIVE.tar.gz" | tee -a $GITHUB_ENV
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
 
@@ -340,7 +340,7 @@ jobs:
         if: ${{ startsWith(matrix.id, 'windows-') }}
         run: |
           7z a "$ARCHIVE.zip" "$ARCHIVE"
-          shasum -a 256 "$ARCHIVE.zip" > "$ARCHIVE.zip.sha256"
+          python3 scripts/checksum.py "$ARCHIVE.zip" > "$ARCHIVE.zip.sha256"
           echo "WINDOWS_ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
           echo "WINDOWS_ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
 
