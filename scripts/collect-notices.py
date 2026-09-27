@@ -2,6 +2,7 @@
 """Preserve installed dependency notices and report any missing source notices."""
 
 import json
+import hashlib
 from pathlib import Path
 import shutil
 import subprocess
@@ -51,13 +52,26 @@ for item in data["bundled"]:
         except (OSError, ValueError, subprocess.CalledProcessError) as error:
             print(f"Cannot collect {package} source notices: {error}", file=sys.stderr)
             paths = []
+    if item.get("package") == "sqlite" and not paths:
+        # SQLite uses a public-domain dedication rather than a LICENSE file.
+        destination = notices / "sqlite"
+        destination.mkdir(exist_ok=True)
+        dedication = destination / "copyright.html"
+        url = "https://www.sqlite.org/copyright.html"
+        subprocess.run(["curl", "--fail", "--location", "--silent", "--show-error",
+                        "--proto", "=https", "--proto-redir", "=https", url, "-o", str(dedication)], check=True)
+        item["notice_sources"] = [{"url": url, "sha256": hashlib.sha256(dedication.read_bytes()).hexdigest()}]
+        continue
     paths = [p for p in paths if p.is_file()]
     if not paths:
         missing.append(item["file"])
     for index, path in enumerate(paths):
         folder = notices / item.get("package", source.name).replace(":", "_")
         folder.mkdir(exist_ok=True)
-        shutil.copy2(path, folder / f"{index}-{path.name}")
+        output = folder / f"{index}-{path.name}"
+        if output.exists():
+            output.chmod(output.stat().st_mode | 0o200)
+        shutil.copy2(path, output)
 data["missing_notices"] = missing
 (root / "runtime-dependencies.json").write_text(json.dumps(data, indent=2) + "\n")
 if missing:
