@@ -18,9 +18,10 @@ cp "$root/scripts/test.sh" "$temporary/$archive/test.sh"
 if [[ "$TARGET" == *linux* ]]; then
     : "${PLATFORM:?Missing container platform}"
     : "${RUNTIME_IMAGE:?Missing runtime image}"
-    cpu_environment=()
-    if [ -n "${QEMU_CPU:-}" ]; then cpu_environment+=(--env "QEMU_CPU=$QEMU_CPU"); fi
-    docker run --rm --platform "$PLATFORM" --user nobody "${cpu_environment[@]}" \
+    # Positional arguments also work with macOS's Bash 3.2 and nounset.
+    set -- docker run --rm --platform "$PLATFORM" --user nobody
+    if [ -n "${QEMU_CPU:-}" ]; then set -- "$@" --env "QEMU_CPU=$QEMU_CPU"; fi
+    "$@" \
         --volume "$temporary/$archive:/opt/test:ro" \
         --tmpfs /usr/share/zoneinfo:ro --tmpfs /tmp:mode=1777 "$RUNTIME_IMAGE" \
         /bin/sh -c 'cd /opt/test && sh ./test.sh "$1"' sh "$version"
