@@ -26,17 +26,19 @@ jobs:
         include:
           - id: linux-arm64
             target: "aarch64-unknown-linux-gnu"
-            os: "ubuntu-24.04-arm"
+            os: "ubuntu-latest"
             platform: "linux/arm64/v8"
             architecture: "AArch64"
             cflags: "-O2 -march=armv8-a"
+            qemu_cpu: "cortex-a53"
 
           - id: linux-arm64-musl
             target: "aarch64-unknown-linux-musl"
-            os: "ubuntu-24.04-arm"
+            os: "ubuntu-latest"
             platform: "linux/arm64/v8"
             architecture: "AArch64"
             cflags: "-O2 -march=armv8-a"
+            qemu_cpu: "cortex-a53"
 
           - id: linux-arm
             target: "arm-unknown-linux-gnueabi"

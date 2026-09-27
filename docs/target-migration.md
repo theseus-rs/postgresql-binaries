@@ -23,8 +23,8 @@ exclude i586. A matching ELF machine number alone is insufficient evidence.
 
 Validation checks every ELF executable/module for class, byte order, machine,
 float/N64/ELFv2 ABI and interpreter; it records ARM attributes and GNU CPU notes.
-Compiler baseline flags are explicit. ARM32 tests use x86 runners and QEMU CPU
-models (arm926, arm1176, cortex-a7) so an ARM64 host cannot silently bypass CPU
+Compiler baseline flags are explicit. ARM tests use x86 runners and QEMU CPU
+models (arm926, arm1176, cortex-a7, cortex-a53) so an ARM64 host cannot silently bypass CPU
 emulation. ARM attributes may include higher-ISA runtime-dispatched routines;
 they are retained as evidence rather than treated as proof of minimum CPU.
 MIPS, PowerPC and s390x runtime tests likewise request MIPS64R2-generic, power8
