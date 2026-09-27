@@ -18,12 +18,19 @@ class TargetTests(unittest.TestCase):
             actual = re.findall(r'^            target: "([^"]+)"$', (root / ".github/workflows" / workflow).read_text(), re.M)
             self.assertEqual(sorted(actual), expected)
             self.assertEqual(len(actual), len(set(actual)))
+            content = (root / ".github/workflows" / workflow).read_text()
+            for target in (t for t in targets if t["enabled"]):
+                start = content.index("          - id: " + target["id"] + "\n")
+                end = content.index("\n\n", start)
+                for field in ("os", "platform", "cflags", "qemu_cpu"):
+                    if field in target:
+                        self.assertIn(f'{field}: "{target[field]}"', content[start:end])
 
     def test_reject_big_endian_mips_and_n32(self):
         target = next(t for t in targets if t["id"] == "linux-mips64le")
         info = dict(bits=64, endian="little", machine=8, flags=0x80000007, interpreter=target["interpreter"])
         module.validate(info, target, True)
-        for field, value in [("endian", "big"), ("bits", 32), ("flags", 0x20), ("interpreter", "/wrong/loader")]:
+        for field, value in [("endian", "big"), ("bits", 32), ("flags", 0x20), ("flags", 0x80004000), ("flags", 0xa0000007), ("interpreter", "/wrong/loader")]:
             with self.assertRaises(ValueError):
                 module.validate({**info, field: value}, target, True)
 

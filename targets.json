@@ -2,7 +2,7 @@
   {
     "id": "linux-arm64",
     "target": "aarch64-unknown-linux-gnu",
-    "os": "ubuntu-24.04-arm",
+    "os": "ubuntu-latest",
     "platform": "linux/arm64/v8",
     "architecture": "AArch64",
     "enabled": true,
@@ -11,12 +11,13 @@
     "machine": 183,
     "cpu": "ARMv8-A",
     "interpreter": "/lib/ld-linux-aarch64.so.1",
-    "cflags": "-O2 -march=armv8-a"
+    "cflags": "-O2 -march=armv8-a",
+    "qemu_cpu": "cortex-a53"
   },
   {
     "id": "linux-arm64-musl",
     "target": "aarch64-unknown-linux-musl",
-    "os": "ubuntu-24.04-arm",
+    "os": "ubuntu-latest",
     "platform": "linux/arm64/v8",
     "architecture": "AArch64",
     "enabled": true,
@@ -25,7 +26,8 @@
     "machine": 183,
     "cpu": "ARMv8-A",
     "interpreter": "/lib/ld-musl-aarch64.so.1",
-    "cflags": "-O2 -march=armv8-a"
+    "cflags": "-O2 -march=armv8-a",
+    "qemu_cpu": "cortex-a53"
   },
   {
     "id": "linux-arm",
@@ -142,7 +144,7 @@
   {
     "id": "linux-x64",
     "target": "x86_64-unknown-linux-gnu",
-    "os": "ubuntu-latest",
+    "os": "ubuntu-24.04-arm",
     "platform": "linux/amd64",
     "architecture": "Advanced Micro Devices X86-64",
     "enabled": true,
@@ -151,12 +153,13 @@
     "machine": 62,
     "cpu": "x86-64",
     "interpreter": "/lib64/ld-linux-x86-64.so.2",
-    "cflags": "-O2 -march=x86-64"
+    "cflags": "-O2 -march=x86-64",
+    "qemu_cpu": "qemu64,-sse3,-cx16,-lahf-lm"
   },
   {
     "id": "linux-x64-musl",
     "target": "x86_64-unknown-linux-musl",
-    "os": "ubuntu-latest",
+    "os": "ubuntu-24.04-arm",
     "platform": "linux/amd64",
     "architecture": "Advanced Micro Devices X86-64",
     "enabled": true,
@@ -165,12 +168,13 @@
     "machine": 62,
     "cpu": "x86-64",
     "interpreter": "/lib/ld-musl-x86_64.so.1",
-    "cflags": "-O2 -march=x86-64"
+    "cflags": "-O2 -march=x86-64",
+    "qemu_cpu": "qemu64,-sse3,-cx16,-lahf-lm"
   },
   {
     "id": "linux-x86",
     "target": "i686-unknown-linux-gnu",
-    "os": "ubuntu-latest",
+    "os": "ubuntu-24.04-arm",
     "platform": "linux/386",
     "architecture": "Intel 80386",
     "enabled": true,
@@ -179,12 +183,13 @@
     "machine": 3,
     "cpu": "i686/SSE2",
     "interpreter": "/lib/ld-linux.so.2",
-    "cflags": "-O2 -march=i686 -msse2 -mfpmath=sse"
+    "cflags": "-O2 -march=i686 -msse2 -mfpmath=sse",
+    "qemu_cpu": "qemu32,-sse3"
   },
   {
     "id": "linux-x86-musl",
     "target": "i686-unknown-linux-musl",
-    "os": "ubuntu-latest",
+    "os": "ubuntu-24.04-arm",
     "platform": "linux/386",
     "architecture": "Intel 80386",
     "enabled": true,
@@ -193,7 +198,8 @@
     "machine": 3,
     "cpu": "i686/SSE2",
     "interpreter": "/lib/ld-musl-i386.so.1",
-    "cflags": "-O2 -march=i686 -msse2 -mfpmath=sse"
+    "cflags": "-O2 -march=i686 -msse2 -mfpmath=sse",
+    "qemu_cpu": "qemu32,-sse3"
   },
   {
     "id": "linux-i586",
@@ -235,7 +241,8 @@
     "machine": 8,
     "cpu": "MIPS64r2 n64",
     "interpreter": "/lib64/ld.so.1",
-    "cflags": "-O2 -march=mips64r2"
+    "cflags": "-O2 -march=mips64r2",
+    "qemu_cpu": "MIPS64R2-generic"
   },
   {
     "id": "linux-powerpc64el",
@@ -249,7 +256,8 @@
     "machine": 21,
     "cpu": "POWER8",
     "interpreter": "/lib64/ld64.so.2",
-    "cflags": "-O2 -mcpu=power8"
+    "cflags": "-O2 -mcpu=power8",
+    "qemu_cpu": "power8"
   },
   {
     "id": "linux-powerpc64el-musl",
@@ -263,7 +271,8 @@
     "machine": 21,
     "cpu": "POWER8",
     "interpreter": "/lib/ld-musl-powerpc64le.so.1",
-    "cflags": "-O2 -mcpu=power8"
+    "cflags": "-O2 -mcpu=power8",
+    "qemu_cpu": "power8"
   },
   {
     "id": "linux-s390x",
@@ -277,7 +286,8 @@
     "machine": 22,
     "cpu": "z196",
     "interpreter": "/lib/ld64.so.1",
-    "cflags": "-O2 -march=z196"
+    "cflags": "-O2 -march=z196",
+    "qemu_cpu": "z196"
   },
   {
     "id": "linux-s390x-musl",
@@ -291,7 +301,8 @@
     "machine": 22,
     "cpu": "z196",
     "interpreter": "/lib/ld-musl-s390x.so.1",
-    "cflags": "-O2 -march=z196"
+    "cflags": "-O2 -march=z196",
+    "qemu_cpu": "z196"
   },
   {
     "id": "macos-arm64",

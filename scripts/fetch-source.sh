@@ -18,22 +18,27 @@ test ! -e "$destination"
 git -c http.sslVerify=true -c http.version=HTTP/1.1 clone \
     --depth 1 --branch "$tag" -c advice.detachedHead=false "$url" "$destination"
 commit=$(git -C "$destination" rev-parse --verify HEAD)
+[[ "$commit" =~ ^[0-9a-f]{40}$ ]]
 test "$commit" = "$(git -C "$destination" rev-parse --verify "refs/tags/$tag^{commit}")"
 git -C "$destination" archive --format=tar HEAD > "$destination/source.tar"
 digest=$(shasum -a 256 "$destination/source.tar" | awk '{print $1}')
 rm "$destination/source.tar"
-python3 - "$destination" "$url" "$tag" "$commit" "$digest" "$upstream_version" <<'PY'
-import json
-import pathlib
-import sys
+[[ "$digest" =~ ^[0-9a-f]{64}$ ]]
+if ! grep -Fq "AC_INIT([PostgreSQL], [$upstream_version]" "$destination/configure.ac"; then
+    echo 'Source version does not match the requested release' >&2
+    exit 1
+fi
 
-directory, url, tag, commit, digest, version = sys.argv[1:]
-source = pathlib.Path(directory)
-if f"AC_INIT([PostgreSQL], [{version}]" not in (source / "configure.ac").read_text():
-    raise SystemExit("Source version does not match the requested release")
-(source / "source-input.json").write_text(json.dumps({
-    "url": url, "tag": tag, "commit": commit, "version": version,
-    "git_archive_sha256": digest, "authentication": "upstream HTTPS with CA validation",
-    "signature_verified": False,
-}, indent=2) + "\n")
-PY
+# The URL is constant; all other interpolated fields are validated above and
+# contain only release-tag characters or hexadecimal digits, so need no escaping.
+cat > "$destination/source-input.json" <<JSON
+{
+  "url": "$url",
+  "tag": "$tag",
+  "commit": "$commit",
+  "version": "$upstream_version",
+  "git_archive_sha256": "$digest",
+  "authentication": "upstream HTTPS with CA validation",
+  "signature_verified": false
+}
+JSON
