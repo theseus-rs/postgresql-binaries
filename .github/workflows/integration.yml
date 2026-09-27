@@ -1,0 +1,37 @@
+name: Integration
+
+on:
+  pull_request:
+    branches:
+      - add-release-provenance
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.versions.outputs.versions }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - id: versions
+        run: |
+          python3 - <<'PY'
+          import datetime, json, os
+          versions = [v['version'] + '.0' for v in json.load(open('supported-versions.json')) if datetime.date.fromisoformat(v['eol']) > datetime.date.today()]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('versions=' + json.dumps(versions) + '\n')
+          PY
+  build:
+    name: PostgreSQL ${{ matrix.version }}
+    needs: versions
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.versions.outputs.versions) }}
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ matrix.version }}
+      upload_artifacts: true
