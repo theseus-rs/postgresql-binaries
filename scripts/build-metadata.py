@@ -26,6 +26,7 @@ features = {name.lower(): bool(re.search(r"^#define USE_" + name + r" 1$", heade
             for name in ("ICU", "LLVM", "LZ4", "ZSTD", "OPENSSL", "LIBXML", "LIBXSLT")}
 features["python"] = any((root / "lib").rglob("plpython3.*"))
 features["bundled_timezone"] = any((root / "share").rglob("timezone/UTC"))
+icu_data = root / "icu-data-input.json"
 source = json.loads((root / "source-input.json").read_text())
 result = {
     "schema_version": 1, "version": version, "target": target,
@@ -35,6 +36,8 @@ result = {
                   "ldflags": config("--ldflags"), "packaging_host": platform.platform()},
     "build_mode": "repackaged-edb" if "windows" in target else "source",
 }
+if icu_data.exists():
+    result["icu_data_input"] = json.loads(icu_data.read_text())
 if "windows" not in target:
     result["toolchain"]["compiler_version"] = subprocess.check_output(["cc", "--version"], text=True).splitlines()[0]
     result["runtime"] = json.loads((root / "runtime-dependencies.json").read_text())

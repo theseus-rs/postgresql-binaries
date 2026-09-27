@@ -23,6 +23,8 @@ RUN apk add --no-cache \
       gcc \
       gettext-dev \
       git \
+      icu \
+      icu-data-full \
       icu-dev \
       krb5-dev \
       libc-dev \
@@ -80,6 +82,9 @@ RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
     make $([ $major_version -ge 15 ] && echo "world-bin") && \
     make $([ $major_version -ge 15 ] && echo "install-world-bin" || echo "install") && \
     make -C contrib install
+
+COPY scripts/bundle-icu-data.sh /usr/local/bin/
+RUN bash /usr/local/bin/bundle-icu-data.sh /opt/postgresql
 
 # Audit executables, extension modules, and their transitive dependencies.
 COPY scripts/bundle-runtime.py scripts/collect-notices.py scripts/alpine-notices.py scripts/build-metadata.py /usr/local/bin/
