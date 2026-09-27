@@ -35,14 +35,15 @@ original contributor commit in #22; do not squash it away without agreement.
   Tests exercised enabled ICU, compression, Python, JIT and extension branches.
   The host was Darwin 27; this does **not** establish the macOS 15 minimum.
   The target audit correctly rejected the local LLVM bottle's macOS 26 minimum.
-* A source-built ARM64 musl 18.6 installation passed in a base Alpine 3.19
-  container with system timezone and ICU data hidden. Tests exercised ICU
+* Pinned ARM64 musl Dockerfile builds passed for 14.24, 15.19, 16.15, 17.11 and
+  18.6 using Alpine 3.19.0. Extracted archives passed on the pinned minimal
+  runtime without system ICU and with system timezone data hidden. Tests exercised ICU
   case/accent behavior, UTC/New York, pgcrypto/xml2/hstore, LZ4, gzip/Zstandard
-  dump/restore, Python SSL/JSON/zlib/decimal and forced LLVM JIT. The ELF audit
-  passed and all 31 bundled library records had collected notices. This local
-  root used the current 3.19 patch image. Its extracted archive also passed on
-  the pinned Alpine 3.19.0 runtime, including checksum, manifest and SBOM checks;
-  the exact pinned build-image CI gate remains necessary.
+  dump/restore, Python SSL/JSON/zlib/decimal and forced LLVM JIT where enabled.
+  ELF audits, notices, checksums, manifests and SBOM checks passed. All 31
+  bundled library records in 18.6 had collected notices. Its tested archive
+  SHA-256 was
+  `9b9a7fb7c2cdf2dfd34492cec597c9591fb5d7bb30e67dee30a42c70afc7757a`.
 * The ARM64 GNU 18.6 Dockerfile build passed using the pinned Debian 12.4 base.
   Its archive passed target, checksum, manifest, SBOM and full enabled-feature
   tests on both the pinned Debian runtime with no system ICU and Ubuntu 24.04
@@ -59,6 +60,11 @@ original contributor commit in #22; do not squash it away without agreement.
   selection, checksum tampering, target ABI, PE imports/delay imports, manifest
   and upstream-feed regressions pass locally, as do Bash syntax and Actions
   workflow checks.
+  A macOS CI failure exposed a transitive ICU `@loader_path` dependency missing
+  from the earlier bundler in #33. A compiled fixture reproduced the failure and
+  passes after the fix in both the earlier and recursive bundlers. Final CI is
+  still required. The Bash-only source fetch also passed a fresh HTTPS download
+  and metadata checks without invoking Python.
 * EDB's actual PL/Python import tables select Python 3.9, 3.10, 3.11, 3.12 and
   3.13 for PostgreSQL 14–18 respectively. The Windows bundler detects this ABI
   and the checksum/manifest helpers support Python 3.9. These are input/header
@@ -76,9 +82,9 @@ majors. It and each PR's required CI must pass at the final submitted revisions;
 queued, superseded or earlier smoke-test jobs are not final acceptance evidence.
 No issue is marked fixed solely from configuration inspection.
 
-The local GNU ICU and pinned musl runtime checks above still need coverage
-across the remaining targets and majors. Other checks include the pinned musl
-build images, macOS 15 without Homebrew access, Windows tar and
+The local GNU ICU and pinned musl checks above still need coverage
+across the remaining targets and majors. Other checks include
+macOS 15 without Homebrew access, Windows tar and
 zip runtime tests, and the constrained ARM/emulated architecture jobs. Other
 CPU minima remain experimental until their execution evidence is recorded.
 
