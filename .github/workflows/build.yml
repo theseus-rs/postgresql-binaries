@@ -323,7 +323,7 @@ jobs:
         if: ${{ !startsWith(matrix.id, 'windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
-          shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+          python3 scripts/checksum.py "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
           echo "ASSET=$ARCHIVE.tar.gz" | tee -a $GITHUB_ENV
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
 
@@ -331,7 +331,7 @@ jobs:
         if: ${{ startsWith(matrix.id, 'windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
-          certutil -hashfile "$ARCHIVE.tar.gz" SHA256 > "$ARCHIVE.tar.gz.sha256"
+          python3 scripts/checksum.py "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
           echo "ASSET=$ARCHIVE.tar.gz" | tee -a $GITHUB_ENV
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
 
@@ -340,7 +340,7 @@ jobs:
         if: ${{ startsWith(matrix.id, 'windows-') }}
         run: |
           7z a "$ARCHIVE.zip" "$ARCHIVE"
-          certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
+          python3 scripts/checksum.py "$ARCHIVE.zip" > "$ARCHIVE.zip.sha256"
           echo "WINDOWS_ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
           echo "WINDOWS_ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
 
@@ -366,34 +366,16 @@ jobs:
           fi
 
       - name: Test build / archive
+        env:
+          TARGET: ${{ matrix.target }}
+          PLATFORM: ${{ matrix.platform }}
+          RUNTIME_IMAGE: postgresql-build:latest
         run: |
-          test_directory=$(mktemp -d)
-          tar xzf "$ARCHIVE.tar.gz" -C "$test_directory"
-          cd "$test_directory/$ARCHIVE"
-          cp "$ROOT_DIRECTORY/scripts/test.sh" .
-          
-          if [[ "${{ matrix.id }}" = macos* ]]; then
-            echo "Testing MacOS"
-            ./test.sh $VERSION
-          elif [[ "${{ matrix.id }}" = windows* ]]; then
-            echo "Testing Windows"
-            ./test.sh $VERSION
-          elif [[ "${{ matrix.id }}" = *musl* ]]; then
-            echo "Testing Linux MUSL"
-            docker run \
-              --platform "$PLATFORM" \
-              --tty \
-              --volume $(pwd):/opt/test \
-              postgresql-build:latest \
-              /bin/sh -c "cd /opt/test && ls -l && ./test.sh $VERSION"
-          else
-            echo "Testing Linux GNU"
-            docker run \
-              --platform "$PLATFORM" \
-              --tty \
-              --volume $(pwd):/opt/test \
-              postgresql-build:latest \
-              /bin/sh -c "cd /opt/test && ls -l && ./test.sh $VERSION"
+          ./scripts/test-archive.sh "$ASSET" "$VERSION"
+          cp "$ASSET_SUM" "$ASSET.tested.sha256"
+          if [ -n "${WINDOWS_ASSET:-}" ]; then
+            ./scripts/test-archive.sh "$WINDOWS_ASSET" "$VERSION"
+            cp "$WINDOWS_ASSET_SUM" "$WINDOWS_ASSET.tested.sha256"
           fi
 
       - name: Stage archive artifacts
@@ -424,11 +406,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "$VERSION" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
+          python3 scripts/verify-checksum.py "$ASSET" "$ASSET.tested.sha256"
+          gh release upload "$VERSION" "$ASSET" "$ASSET_SUM"
+          mkdir draft-check
+          gh release download "$VERSION" --pattern "$ASSET" --dir draft-check
+          python3 scripts/verify-checksum.py "draft-check/$ASSET" "$ASSET.tested.sha256"
 
       - name: Upload release archive (Windows)
         if: ${{ inputs.release == true && startsWith(matrix.id, 'windows-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "$VERSION" ${{ env.WINDOWS_ASSET }} ${{ env.WINDOWS_ASSET_SUM }}
+          python3 scripts/verify-checksum.py "$WINDOWS_ASSET" "$WINDOWS_ASSET.tested.sha256"
+          gh release upload "$VERSION" "$WINDOWS_ASSET" "$WINDOWS_ASSET_SUM"
+          gh release download "$VERSION" --pattern "$WINDOWS_ASSET" --dir draft-check
+          python3 scripts/verify-checksum.py "draft-check/$WINDOWS_ASSET" "$WINDOWS_ASSET.tested.sha256"
