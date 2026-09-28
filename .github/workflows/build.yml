@@ -192,7 +192,8 @@ jobs:
           echo "ARCHIVE=$archive" | tee -a $GITHUB_ENV
           echo "INSTALL_DIRECTORY=$install_directory" | tee -a $GITHUB_ENV
           echo "ROOT_DIRECTORY=$root_directory" | tee -a $GITHUB_ENV
-          echo "VERSION=$version" | tee -a $GITHUB_ENV
+          echo "VERSION=$version" | tee -a "$GITHUB_ENV"
+          echo "BUILD_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       #
       # Linux Build
@@ -217,10 +218,11 @@ jobs:
       - name: Build (Linux)
         env:
           TARGET_CFLAGS: ${{ matrix.cflags }}
+          TARGET: ${{ matrix.target }}
         if: ${{ startsWith(matrix.id, 'linux-') }}
         run: |
           cp $DOCKERFILE Dockerfile
-          docker buildx build --build-arg "POSTGRESQL_VERSION=$VERSION" --build-arg "TARGET_CFLAGS=$TARGET_CFLAGS" --platform "$PLATFORM" --tag postgresql-build:latest .
+          docker buildx build --build-arg "POSTGRESQL_VERSION=$VERSION" --build-arg "TARGET_CFLAGS=$TARGET_CFLAGS" --build-arg "TARGET=$TARGET" --build-arg "BUILD_REVISION=$BUILD_REVISION" --platform "$PLATFORM" --tag postgresql-build:latest .
           
           docker create --platform "$PLATFORM" --name pgbuild postgresql-build:latest
           docker cp pgbuild:/opt/postgresql $INSTALL_DIRECTORY
@@ -300,6 +302,12 @@ jobs:
       # Package
       #
 
+      - name: Record build metadata (macOS, Windows)
+        if: ${{ !startsWith(matrix.id, 'linux-') }}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: python3 scripts/build-metadata.py "$INSTALL_DIRECTORY" "$VERSION" "$TARGET"
+
       - name: Check redistribution notices
         if: ${{ inputs.release == true && !startsWith(matrix.id, 'windows-') }}
         run: |
@@ -325,7 +333,7 @@ jobs:
       - name: Build archive (Linux, MacOS)
         if: ${{ !startsWith(matrix.id, 'windows-') }}
         run: |
-          tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+          COPYFILE_DISABLE=1 tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           python3 scripts/checksum.py "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
           echo "ASSET=$ARCHIVE.tar.gz" | tee -a $GITHUB_ENV
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
@@ -345,7 +353,9 @@ jobs:
           7z a "$ARCHIVE.zip" "$ARCHIVE"
           python3 scripts/checksum.py "$ARCHIVE.zip" > "$ARCHIVE.zip.sha256"
           echo "WINDOWS_ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
-          echo "WINDOWS_ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
+          echo "WINDOWS_ASSET_SUM=$ARCHIVE.zip.sha256" >> "$GITHUB_ENV"
+          echo "WINDOWS_MANIFEST=$ARCHIVE.zip.manifest.json" >> "$GITHUB_ENV"
+          echo "WINDOWS_SBOM=$ARCHIVE.zip.spdx.json" >> "$GITHUB_ENV"
 
       #
       # Test
@@ -380,14 +390,60 @@ jobs:
           docker build --platform "$PLATFORM" -f dockerfiles/Dockerfile.test-icu -t "$RUNTIME_IMAGE" .
           ./scripts/test-archive.sh "$ASSET" "$VERSION"
 
+      - name: Generate and validate manifests and SBOMs
+        run: |
+          for asset in "$ASSET" ${WINDOWS_ASSET:+"$WINDOWS_ASSET"}; do
+            python3 scripts/verify-checksum.py "$asset" "$asset.tested.sha256"
+            python3 scripts/archive-manifest.py generate "$asset"
+            python3 scripts/archive-manifest.py verify "$asset"
+          done
+
+      - name: Attest release provenance
+        if: ${{ inputs.release == true }}
+        id: provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.manifest.json
+            ${{ env.ASSET }}.spdx.json
+            ${{ env.WINDOWS_ASSET }}
+            ${{ env.WINDOWS_MANIFEST }}
+            ${{ env.WINDOWS_SBOM }}
+
+      - name: Attest release SBOM
+        if: ${{ inputs.release == true }}
+        id: sbom
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-path: ${{ env.ASSET }}
+          sbom-path: ${{ env.ASSET }}.spdx.json
+
+      - name: Attest Windows zip SBOM
+        if: ${{ inputs.release == true && startsWith(matrix.id, 'windows-') }}
+        id: windows_sbom
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-path: ${{ env.WINDOWS_ASSET }}
+          sbom-path: ${{ env.WINDOWS_SBOM }}
+
+      - name: Preserve attestation bundles
+        if: ${{ inputs.release == true }}
+        env:
+          PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          SBOM_BUNDLE: ${{ steps.sbom.outputs.bundle-path }}
+        run: |
+          cp "$PROVENANCE_BUNDLE" "$ASSET.provenance.json"
+          cp "$SBOM_BUNDLE" "$ASSET.sbom-attestation.json"
+
       - name: Stage archive artifacts
         if: ${{ inputs.upload_artifacts == true }}
         run: |
           mkdir -p artifacts
-          cp "$ASSET" "$ASSET_SUM" artifacts/
+          cp "$ASSET" "$ASSET_SUM" "$ASSET.manifest.json" "$ASSET.spdx.json" artifacts/
 
           if [ -n "${WINDOWS_ASSET:-}" ]; then
-            cp "$WINDOWS_ASSET" "$WINDOWS_ASSET_SUM" artifacts/
+            cp "$WINDOWS_ASSET" "$WINDOWS_ASSET_SUM" "$WINDOWS_ASSET.manifest.json" "$WINDOWS_ASSET.spdx.json" artifacts/
           fi
 
       - name: Upload archive artifacts
@@ -409,7 +465,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 scripts/verify-checksum.py "$ASSET" "$ASSET.tested.sha256"
-          gh release upload "$VERSION" "$ASSET" "$ASSET_SUM"
+          gh release upload "$VERSION" "$ASSET" "$ASSET_SUM" "$ASSET.manifest.json" "$ASSET.spdx.json" "$ASSET.provenance.json" "$ASSET.sbom-attestation.json"
           mkdir draft-check
           gh release download "$VERSION" --pattern "$ASSET" --dir draft-check
           python3 scripts/verify-checksum.py "draft-check/$ASSET" "$ASSET.tested.sha256"
@@ -420,6 +476,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 scripts/verify-checksum.py "$WINDOWS_ASSET" "$WINDOWS_ASSET.tested.sha256"
-          gh release upload "$VERSION" "$WINDOWS_ASSET" "$WINDOWS_ASSET_SUM"
+          gh release upload "$VERSION" "$WINDOWS_ASSET" "$WINDOWS_ASSET_SUM" "$WINDOWS_ASSET.manifest.json" "$WINDOWS_ASSET.spdx.json"
           gh release download "$VERSION" --pattern "$WINDOWS_ASSET" --dir draft-check
           python3 scripts/verify-checksum.py "draft-check/$WINDOWS_ASSET" "$WINDOWS_ASSET.tested.sha256"

@@ -2,6 +2,8 @@
 FROM alpine:3.19.0@sha256:51b67269f354137895d43f3b3d810bfacd3945438e94dc5ac55fdac340352f48
 
 ARG POSTGRESQL_VERSION
+ARG TARGET
+ARG BUILD_REVISION
 ARG TARGET_CFLAGS="-O2"
 ENV CFLAGS="$TARGET_CFLAGS"
 ENV CXXFLAGS="$TARGET_CFLAGS"
@@ -88,11 +90,12 @@ COPY scripts/bundle-icu-data.sh /usr/local/bin/
 RUN bash /usr/local/bin/bundle-icu-data.sh /opt/postgresql
 
 # Audit executables, extension modules, and their transitive dependencies.
-COPY scripts/bundle-runtime.py scripts/collect-notices.py /usr/local/bin/
+COPY scripts/bundle-runtime.py scripts/collect-notices.py scripts/alpine-notices.py scripts/build-metadata.py /usr/local/bin/
 RUN python3 /usr/local/bin/bundle-runtime.py /opt/postgresql && \
     python3 /usr/local/bin/collect-notices.py /opt/postgresql
 
-RUN cp /usr/src/postgresql/COPYRIGHT /usr/src/postgresql/source-input.json /opt/postgresql
+RUN cp /usr/src/postgresql/COPYRIGHT /usr/src/postgresql/source-input.json /opt/postgresql && \
+    BUILD_REVISION="$BUILD_REVISION" python3 /usr/local/bin/build-metadata.py /opt/postgresql "$POSTGRESQL_VERSION" "$TARGET"
 
 # Create user and group for running tests
 RUN addgroup -S -g 1000 postgresql && \
