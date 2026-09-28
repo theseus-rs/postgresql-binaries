@@ -12,7 +12,11 @@ repository=${GITHUB_REPOSITORY:-theseus-rs/postgresql-binaries}
 
 # Derive the expected inventory from the build matrix, not the release listing:
 # an incomplete release must not pass by only checking what happens to exist.
-targets=$(sed -n 's/^            target: //p' "$root/.github/workflows/build.yml")
+targets=$(python3 - "$root/targets.json" <<'PYTHON'
+import json, sys
+print("\n".join(t["target"] for t in json.load(open(sys.argv[1])) if t["enabled"]))
+PYTHON
+)
 test -n "$targets"
 for target in $targets; do
     extensions=(tar.gz)

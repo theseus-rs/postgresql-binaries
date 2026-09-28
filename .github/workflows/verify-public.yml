@@ -24,153 +24,147 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # When adding a new target, define a new id above
-
-          #
-          # Linux
-          #
-
           - id: linux-arm64
-            target: aarch64-unknown-linux-gnu
-            os: ubuntu-24.04-arm
-            platform: linux/arm64/v8
+            target: "aarch64-unknown-linux-gnu"
+            os: "ubuntu-latest"
+            platform: "linux/arm64/v8"
             architecture: "AArch64"
+            cflags: "-O2 -march=armv8-a"
+            qemu_cpu: "cortex-a53"
 
           - id: linux-arm64-musl
-            target: aarch64-unknown-linux-musl
-            os: ubuntu-24.04-arm
-            platform: linux/arm64/v8
+            target: "aarch64-unknown-linux-musl"
+            os: "ubuntu-latest"
+            platform: "linux/arm64/v8"
             architecture: "AArch64"
+            cflags: "-O2 -march=armv8-a"
+            qemu_cpu: "cortex-a53"
 
           - id: linux-arm
-            target: arm-unknown-linux-gnueabi
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v6
+            target: "arm-unknown-linux-gnueabi"
+            os: "ubuntu-latest"
+            platform: "linux/arm/v5"
             architecture: "ARM"
-
-          - id: linux-arm-musl
-            target: arm-unknown-linux-musleabi
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v6
-            architecture: "ARM"
-
-          - id: linux-armhf
-            target: arm-unknown-linux-gnueabihf
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v7
-            architecture: "ARM"
+            cflags: "-O2 -march=armv6 -mfloat-abi=soft"
+            qemu_cpu: "arm1176"
 
           - id: linux-armhf-musl
-            target: arm-unknown-linux-musleabihf
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v7
+            target: "arm-unknown-linux-musleabihf"
+            os: "ubuntu-latest"
+            platform: "linux/arm/v6"
             architecture: "ARM"
+            cflags: "-O2 -march=armv6 -mfloat-abi=hard -mfpu=vfp"
+            qemu_cpu: "arm1176"
 
           - id: linux-armv5te
-            target: armv5te-unknown-linux-gnueabi
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v5
+            target: "armv5te-unknown-linux-gnueabi"
+            os: "ubuntu-latest"
+            platform: "linux/arm/v5"
             architecture: "ARM"
+            cflags: "-O2 -march=armv5te -mfloat-abi=soft"
+            qemu_cpu: "arm926"
 
           - id: linux-armv7l
-            target: armv7-unknown-linux-gnueabihf
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v7
+            target: "armv7-unknown-linux-gnueabihf"
+            os: "ubuntu-latest"
+            platform: "linux/arm/v7"
             architecture: "ARM"
+            cflags: "-O2 -march=armv7-a -mfloat-abi=hard -mfpu=vfp"
+            qemu_cpu: "cortex-a7"
 
           - id: linux-armv7l-musl
-            target: armv7-unknown-linux-musleabihf
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v7
+            target: "armv7-unknown-linux-musleabihf"
+            os: "ubuntu-latest"
+            platform: "linux/arm/v7"
             architecture: "ARM"
+            cflags: "-O2 -march=armv7-a -mfloat-abi=hard -mfpu=vfp"
+            qemu_cpu: "cortex-a7"
 
           - id: linux-x64
-            target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/amd64
+            target: "x86_64-unknown-linux-gnu"
+            os: "ubuntu-24.04-arm"
+            platform: "linux/amd64"
             architecture: "Advanced Micro Devices X86-64"
+            cflags: "-O2 -march=x86-64"
+            qemu_cpu: "qemu64,-sse3,-cx16,-lahf-lm"
 
           - id: linux-x64-musl
-            target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/amd64
+            target: "x86_64-unknown-linux-musl"
+            os: "ubuntu-24.04-arm"
+            platform: "linux/amd64"
             architecture: "Advanced Micro Devices X86-64"
+            cflags: "-O2 -march=x86-64"
+            qemu_cpu: "qemu64,-sse3,-cx16,-lahf-lm"
 
           - id: linux-x86
-            target: i686-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/386
+            target: "i686-unknown-linux-gnu"
+            os: "ubuntu-24.04-arm"
+            platform: "linux/386"
             architecture: "Intel 80386"
+            cflags: "-O2 -march=i686 -msse2 -mfpmath=sse"
+            qemu_cpu: "qemu32,-sse3"
 
           - id: linux-x86-musl
-            target: i686-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/386
+            target: "i686-unknown-linux-musl"
+            os: "ubuntu-24.04-arm"
+            platform: "linux/386"
             architecture: "Intel 80386"
-
-          - id: linux-i586
-            target: i586-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/386
-            architecture: "Intel 80386"
-
-          - id: linux-i586-musl
-            target: i586-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/386
-            architecture: "Intel 80386"
+            cflags: "-O2 -march=i686 -msse2 -mfpmath=sse"
+            qemu_cpu: "qemu32,-sse3"
 
           - id: linux-mips64le
-            target: mips64-unknown-linux-gnuabi64
-            os: ubuntu-latest
-            platform: linux/mips64le
+            target: "mips64el-unknown-linux-gnuabi64"
+            os: "ubuntu-latest"
+            platform: "linux/mips64le"
             architecture: "MIPS R3000"
+            cflags: "-O2 -march=mips64r2"
+            qemu_cpu: "MIPS64R2-generic"
 
           - id: linux-powerpc64el
-            target: powerpc64le-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/ppc64le
+            target: "powerpc64le-unknown-linux-gnu"
+            os: "ubuntu-latest"
+            platform: "linux/ppc64le"
             architecture: "PowerPC64"
+            cflags: "-O2 -mcpu=power8"
+            qemu_cpu: "power8"
 
           - id: linux-powerpc64el-musl
-            target: powerpc64le-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/ppc64le
+            target: "powerpc64le-unknown-linux-musl"
+            os: "ubuntu-latest"
+            platform: "linux/ppc64le"
             architecture: "PowerPC64"
+            cflags: "-O2 -mcpu=power8"
+            qemu_cpu: "power8"
 
           - id: linux-s390x
-            target: s390x-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/s390x
+            target: "s390x-unknown-linux-gnu"
+            os: "ubuntu-latest"
+            platform: "linux/s390x"
             architecture: "IBM S/390"
+            cflags: "-O2 -march=z196"
+            qemu_cpu: "z196"
 
           - id: linux-s390x-musl
-            target: s390x-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/s390x
+            target: "s390x-unknown-linux-musl"
+            os: "ubuntu-latest"
+            platform: "linux/s390x"
             architecture: "IBM S/390"
-
-          #
-          # MacOS
-          #
+            cflags: "-O2 -march=z196"
+            qemu_cpu: "z196"
 
           - id: macos-arm64
-            target: aarch64-apple-darwin
-            os: macos-15
+            target: "aarch64-apple-darwin"
+            os: "macos-15"
             architecture: "arm64"
 
           - id: macos-x64
-            target: x86_64-apple-darwin
-            os: macos-15-intel
+            target: "x86_64-apple-darwin"
+            os: "macos-15-intel"
             architecture: "x86_64"
 
-          #
-          # Windows
-          #
-
           - id: windows-x64
-            target: x86_64-pc-windows-msvc
-            os: windows-latest
+            target: "x86_64-pc-windows-msvc"
+            os: "windows-latest"
             architecture: "x86-64"
 
     defaults:
@@ -183,6 +177,7 @@ jobs:
           VERSION: ${{ inputs.version }}
           TARGET: ${{ matrix.target }}
           PLATFORM: ${{ matrix.platform }}
+          QEMU_CPU: ${{ matrix.qemu_cpu }}
         run: |
           if [[ "$TARGET" == *linux* ]]; then
             docker run --privileged --rm tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 --install all # 2026-09-27
