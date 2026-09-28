@@ -36,6 +36,12 @@ query "SET TIME ZONE 'America/New_York'"
 test "$(query "SELECT extract(hour FROM timestamp '2026-01-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 7
 test "$(query "SELECT extract(hour FROM timestamp '2026-07-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 8
 
+# ICU must work with the bundled version, regardless of the host's ICU ABI.
+query "CREATE COLLATION portable_case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false)"
+test "$(query "SELECT 'A' = 'a' COLLATE portable_case_insensitive")" = t
+test "$(query "SELECT 'resume' = 'résumé' COLLATE portable_case_insensitive")" = f
+test "$(query "SELECT count(DISTINCT value COLLATE portable_case_insensitive) FROM (VALUES ('A'), ('a'), ('b')) AS values_to_compare(value)")" = 2
+
 # Exercise libraries loaded only by extensions, not just postgres itself.
 query "CREATE EXTENSION pgcrypto; SELECT encode(digest('portable', 'sha256'), 'hex')"
 query "CREATE EXTENSION xml2; SELECT xml_is_well_formed('<portable/>')"
