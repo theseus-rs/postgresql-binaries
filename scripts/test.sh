@@ -22,6 +22,16 @@ cleanup() {
 trap cleanup EXIT
 ./pg_ctl -w -D "$data_directory" -l "$data_directory/server.log" -o "-p $port -F -h 127.0.0.1" start
 
+# The relocated install must carry its own tzdata.
+test -f ../share/timezone/UTC || test -f ../share/postgresql/timezone/UTC
+query() {
+    ./psql -X -v ON_ERROR_STOP=1 -qtAX -h localhost -p "$port" -U postgres -d postgres -c "$1"
+}
+query "SET TIME ZONE 'UTC'"
+query "SET TIME ZONE 'America/New_York'"
+test "$(query "SELECT extract(hour FROM timestamp '2026-01-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 7
+test "$(query "SELECT extract(hour FROM timestamp '2026-07-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 8
+
 echo "Running tests..."
 set -x
 

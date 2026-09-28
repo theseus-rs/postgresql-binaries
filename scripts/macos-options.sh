@@ -14,7 +14,7 @@ configure_options=(
     --enable-option-checking=fatal
     --with-icu --without-ldap --with-libxml --with-libxslt
     --with-lz4 --with-openssl --with-pgport=5432 --with-readline
-    --with-system-tzdata=/usr/share/zoneinfo --with-uuid=e2fs
+    --with-uuid=e2fs
 )
 if [ "$major_version" -le 16 ]; then
     configure_options+=(--enable-thread-safety)
