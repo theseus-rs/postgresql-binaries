@@ -18,12 +18,18 @@ test ! -e "$destination"
 git -c http.sslVerify=true -c http.version=HTTP/1.1 clone \
     --depth 1 --branch "$tag" -c advice.detachedHead=false "$url" "$destination"
 commit=$(git -C "$destination" rev-parse --verify HEAD)
-[[ "$commit" =~ ^[0-9a-f]{40}$ ]]
+if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+    echo 'Invalid source commit' >&2
+    exit 1
+fi
 test "$commit" = "$(git -C "$destination" rev-parse --verify "refs/tags/$tag^{commit}")"
 git -C "$destination" archive --format=tar HEAD > "$destination/source.tar"
 digest=$(shasum -a 256 "$destination/source.tar" | awk '{print $1}')
 rm "$destination/source.tar"
-[[ "$digest" =~ ^[0-9a-f]{64}$ ]]
+if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
+    echo 'Invalid source archive digest' >&2
+    exit 1
+fi
 if ! grep -Fq "AC_INIT([PostgreSQL], [$upstream_version]" "$destination/configure.ac"; then
     echo 'Source version does not match the requested release' >&2
     exit 1
