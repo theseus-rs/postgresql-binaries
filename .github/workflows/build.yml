@@ -234,6 +234,7 @@ jobs:
         run: |
           platform="${{ matrix.platform }}";
           
+          # tonistiigi/binfmt:latest, resolved 2026-09-27
           docker run --privileged --rm tonistiigi/binfmt --install all
           
           if [[ "${{ matrix.id }}" = *musl* ]]; then
@@ -262,8 +263,7 @@ jobs:
         if: ${{ startsWith(matrix.id, 'macos-') }}
         run: |
           source_directory="$ROOT_DIRECTORY/postgresql-src"
-          branch=$(echo "$VERSION" | awk -F. '{print "REL_"$1"_"$2}')
-          git clone --depth 1 --branch $branch -c advice.detachedHead=false https://git.postgresql.org/git/postgresql.git "$source_directory"
+          ./scripts/fetch-source.sh "$VERSION" "$source_directory"
           echo "SOURCE_DIRECTORY=$source_directory" | tee -a $GITHUB_ENV
 
       - name: Configure build (MacOS)
@@ -313,7 +313,7 @@ jobs:
           make $([ $major_version -ge 15 ] && echo "install-world-bin" || echo "install")
           make -C contrib install
 
-          cp "$SOURCE_DIRECTORY/COPYRIGHT" "$INSTALL_DIRECTORY"
+          cp "$SOURCE_DIRECTORY/COPYRIGHT" "$SOURCE_DIRECTORY/source-input.json" "$INSTALL_DIRECTORY"
           cd "$ROOT_DIRECTORY"
 
       # This allows the MacOS build to be relocated to a different directory and bundles dependencies
@@ -333,8 +333,7 @@ jobs:
       - name: Download binaries (Windows)
         if: ${{ startsWith(matrix.id, 'windows-') }}
         run: |
-          postgresql_version=$(echo "$VERSION" | awk -F. '{print $1"."$2}')
-          curl https://get.enterprisedb.com/postgresql/postgresql-${postgresql_version}-1-windows-x64-binaries.zip > postgresql.zip
+          ./scripts/fetch-windows.sh "$VERSION" postgresql.zip
 
       - name: Extract binaries (Windows)
         if: ${{ startsWith(matrix.id, 'windows-') }}
@@ -342,6 +341,7 @@ jobs:
           unzip postgresql.zip
           rm -rf pgsql/doc pgsql/pgAdmin*
           mv pgsql "$INSTALL_DIRECTORY"
+          cp windows-input.json "$INSTALL_DIRECTORY/source-input.json"
 
       #
       # Package
