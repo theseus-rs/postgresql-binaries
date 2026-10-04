@@ -6,10 +6,23 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
+  regression:
+    name: Regression checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          for script in scripts/*.sh tests/*.sh; do bash -n "$script"; done
+          for test in tests/test*.sh; do bash "$test"; done
+
   initialize:
     name: Initialize
     runs-on: ubuntu-latest
