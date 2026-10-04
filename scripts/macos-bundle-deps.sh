@@ -34,23 +34,31 @@ sign_mach_o_files() {
 # Function to bundle a library and its dependencies
 bundle_lib() {
     local lib_path="$1"
-    local lib_name=$(basename "$lib_path")
+    local lib_name="${2:-$(basename "$lib_path")}"
     
     if [ -f "$INSTALL_DIR/lib/$lib_name" ]; then
         return
     fi
     
     echo "  Bundling $lib_name"
-    cp "$lib_path" "$INSTALL_DIR/lib/"
+    cp "$lib_path" "$INSTALL_DIR/lib/$lib_name"
     chmod +w "$INSTALL_DIR/lib/$lib_name"
     
     # Set the ID of the dylib to be relative
     install_name_tool -id "@loader_path/../lib/$lib_name" "$INSTALL_DIR/lib/$lib_name"
     
-    # Get dependencies and fix them
-    otool -L "$INSTALL_DIR/lib/$lib_name" | grep "$BREW_PREFIX" | awk '{print $1}' | while read -r dep; do
-        local dep_real_path=$(get_realpath "$dep")
-        bundle_lib "$dep_real_path"
+    # Resolve relative dependencies from the original library's directory before
+    # relocating it. Homebrew ICU uses these for its transitive data library.
+    otool -L "$lib_path" | tail -n +2 | awk '{print $1}' | while read -r dep; do
+        local dep_path
+        case "$dep" in
+            "$BREW_PREFIX"/*) dep_path="$dep" ;;
+            @loader_path/*) dep_path="$(dirname "$lib_path")/${dep#@loader_path/}" ;;
+            *) continue ;;
+        esac
+        local dep_real_path
+        dep_real_path=$(get_realpath "$dep_path")
+        bundle_lib "$dep_real_path" "$(basename "$dep")"
         local dep_name=$(basename "$dep")
         echo "    Changing dependency $dep to @loader_path/../lib/$dep_name in $lib_name"
         install_name_tool -change "$dep" "@loader_path/../lib/$dep_name" "$INSTALL_DIR/lib/$lib_name"
@@ -64,7 +72,7 @@ find "$INSTALL_DIR/bin" -type f | while read -r binary; do
         echo "  Processing binary: $(basename "$binary")"
         otool -L "$binary" | grep "$BREW_PREFIX" | awk '{print $1}' | while read -r dep; do
             dep_real_path=$(get_realpath "$dep")
-            bundle_lib "$dep_real_path"
+            bundle_lib "$dep_real_path" "$(basename "$dep")"
             dep_name=$(basename "$dep")
             echo "    Changing dependency $dep to @loader_path/../lib/$dep_name"
             install_name_tool -change "$dep" "@loader_path/../lib/$dep_name" "$binary"
@@ -90,7 +98,7 @@ find "$INSTALL_DIR/lib" -maxdepth 1 -name "*.dylib" | while read -r lib; do
         # Fix dependencies to other Homebrew libs
         otool -L "$lib" | grep "$BREW_PREFIX" | awk '{print $1}' | while read -r dep; do
             dep_real_path=$(get_realpath "$dep")
-            bundle_lib "$dep_real_path"
+            bundle_lib "$dep_real_path" "$(basename "$dep")"
             dep_name=$(basename "$dep")
             install_name_tool -change "$dep" "@loader_path/../lib/$dep_name" "$lib"
         done

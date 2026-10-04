@@ -266,55 +266,20 @@ jobs:
           ./scripts/fetch-source.sh "$VERSION" "$source_directory"
           echo "SOURCE_DIRECTORY=$source_directory" | tee -a $GITHUB_ENV
 
+      - name: Test macOS build helpers
+        if: ${{ startsWith(matrix.id, 'macos-') }}
+        run: |
+          bash tests/test-macos-options.sh
+          bash tests/test-macos-symlinks.sh
+
       - name: Configure build (MacOS)
         if: ${{ startsWith(matrix.id, 'macos-') }}
         run: |
-          brew install \
-            fop \
-            lld \
-            llvm
-          
-          brew_dir="/usr/local"
-          if [ "${{ matrix.id }}" == "macos-arm64" ]; then
-            brew_dir="/opt/homebrew"
-          fi
-          brew_opt_dir="$brew_dir/opt"          
-          ls -l "$brew_opt_dir"
-
-          echo "CPPFLAGS=-I${brew_opt_dir}/icu4c/include -I${brew_opt_dir}/openssl/include" | tee -a $GITHUB_ENV
-          echo "LDFLAGS=-L${brew_opt_dir}/icu4c/lib -L${brew_opt_dir}/openssl/lib" | tee -a $GITHUB_ENV
-          echo "LLVM_CONFIG=${brew_opt_dir}/llvm/bin/llvm-config" | tee -a $GITHUB_ENV
+          ./scripts/configure-macos.sh
 
       - name: Build (MacOS)
         if: ${{ startsWith(matrix.id, 'macos-') }}
-        run: |
-          cd "$SOURCE_DIRECTORY"
-          major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}')
-          
-          ./configure $build_directory \
-            --prefix "$INSTALL_DIRECTORY" \
-            --enable-integer-datetimes \
-            --enable-option-checking=fatal \
-            $([ $major_version -le 16 ] && echo "--enable-thread-safety") \
-            $([ $major_version -ge 14 ] && echo "--with-icu" || echo "--without-icu") \
-            --without-ldap \
-            --with-libxml \
-            --with-libxslt \
-            $([ $major_version -ge 16 ] && echo "--with-llvm") \
-            $([ $major_version -ge 14 ] && echo "--with-lz4") \
-            --with-openssl \
-            --with-pgport=5432 \
-            $([ $major_version -ge 15 ] && echo "--with-python") \
-            --with-readline \
-            --with-system-tzdata=/usr/share/zoneinfo \
-            --with-uuid=e2fs \
-            $([ $major_version -ge 16 ] && echo "--with-zstd")
-          make $([ $major_version -ge 15 ] && echo "world-bin")
-          make $([ $major_version -ge 15 ] && echo "install-world-bin" || echo "install")
-          make -C contrib install
-
-          cp "$SOURCE_DIRECTORY/COPYRIGHT" "$SOURCE_DIRECTORY/source-input.json" "$INSTALL_DIRECTORY"
-          cd "$ROOT_DIRECTORY"
+        run: ./scripts/build-macos.sh
 
       # This allows the MacOS build to be relocated to a different directory and bundles dependencies
       - name: Update library paths (MacOS)
