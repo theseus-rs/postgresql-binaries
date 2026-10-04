@@ -216,4 +216,4 @@ sys.stdout.write(sys.base_prefix)
 PY
 )"
 python_root="$(cygpath -u "$python_root")"
-find "$python_root" -maxdepth 1 -type f -iname 'python*.dll' -exec cp {} "$INSTALL_DIRECTORY/bin/" \; || true
+WINDOWS_PYTHON_ROOT="$python_root" bash "$ROOT_DIRECTORY/scripts/windows-runtime.sh" bundle-source "$INSTALL_DIRECTORY"
