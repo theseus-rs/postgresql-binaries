@@ -1,0 +1,205 @@
+name: Verify public release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published packaging version to verify
+        required: true
+        default: 18.6.0
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # When adding a new target, define a new id above
+
+          #
+          # Linux
+          #
+
+          - id: linux-arm64
+            target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            platform: linux/arm64/v8
+            architecture: "AArch64"
+
+          - id: linux-arm64-musl
+            target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
+            platform: linux/arm64/v8
+            architecture: "AArch64"
+
+          - id: linux-arm
+            target: arm-unknown-linux-gnueabi
+            os: ubuntu-24.04-arm
+            platform: linux/arm/v6
+            architecture: "ARM"
+
+          - id: linux-arm-musl
+            target: arm-unknown-linux-musleabi
+            os: ubuntu-24.04-arm
+            platform: linux/arm/v6
+            architecture: "ARM"
+
+          - id: linux-armhf
+            target: arm-unknown-linux-gnueabihf
+            os: ubuntu-24.04-arm
+            platform: linux/arm/v7
+            architecture: "ARM"
+
+          - id: linux-armhf-musl
+            target: arm-unknown-linux-musleabihf
+            os: ubuntu-24.04-arm
+            platform: linux/arm/v7
+            architecture: "ARM"
+
+          - id: linux-armv5te
+            target: armv5te-unknown-linux-gnueabi
+            os: ubuntu-24.04-arm
+            platform: linux/arm/v5
+            architecture: "ARM"
+
+          - id: linux-armv7l
+            target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-24.04-arm
+            platform: linux/arm/v7
+            architecture: "ARM"
+
+          - id: linux-armv7l-musl
+            target: armv7-unknown-linux-musleabihf
+            os: ubuntu-24.04-arm
+            platform: linux/arm/v7
+            architecture: "ARM"
+
+          - id: linux-x64
+            target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux/amd64
+            architecture: "Advanced Micro Devices X86-64"
+
+          - id: linux-x64-musl
+            target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux/amd64
+            architecture: "Advanced Micro Devices X86-64"
+
+          - id: linux-x86
+            target: i686-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux/386
+            architecture: "Intel 80386"
+
+          - id: linux-x86-musl
+            target: i686-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux/386
+            architecture: "Intel 80386"
+
+          - id: linux-i586
+            target: i586-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux/386
+            architecture: "Intel 80386"
+
+          - id: linux-i586-musl
+            target: i586-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux/386
+            architecture: "Intel 80386"
+
+          - id: linux-mips64le
+            target: mips64-unknown-linux-gnuabi64
+            os: ubuntu-latest
+            platform: linux/mips64le
+            architecture: "MIPS R3000"
+
+          - id: linux-powerpc64el
+            target: powerpc64le-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux/ppc64le
+            architecture: "PowerPC64"
+
+          - id: linux-powerpc64el-musl
+            target: powerpc64le-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux/ppc64le
+            architecture: "PowerPC64"
+
+          - id: linux-s390x
+            target: s390x-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux/s390x
+            architecture: "IBM S/390"
+
+          - id: linux-s390x-musl
+            target: s390x-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux/s390x
+            architecture: "IBM S/390"
+
+          #
+          # MacOS
+          #
+
+          - id: macos-arm64
+            target: aarch64-apple-darwin
+            os: macos-15
+            architecture: "arm64"
+
+          - id: macos-x64
+            target: x86_64-apple-darwin
+            os: macos-15-intel
+            architecture: "x86_64"
+
+          #
+          # Windows
+          #
+
+          - id: windows-x64
+            target: x86_64-pc-windows-msvc
+            os: windows-latest
+            architecture: "x86-64"
+
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download and execute public archive
+        env:
+          VERSION: ${{ inputs.version }}
+          TARGET: ${{ matrix.target }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          if [[ "$TARGET" == *linux* ]]; then
+            docker run --privileged --rm tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 --install all # 2026-09-27
+            if [[ "$TARGET" == *musl* ]]; then
+              export RUNTIME_IMAGE=alpine:3.19.0@sha256:51b67269f354137895d43f3b3d810bfacd3945438e94dc5ac55fdac340352f48
+            else
+              export RUNTIME_IMAGE=debian:12.4@sha256:79becb70a6247d277b59c09ca340bbe0349af6aacb5afa90ec349528b53ce2c9
+            fi
+          fi
+          extensions=(tar.gz)
+          if [[ "$TARGET" == *windows* ]]; then extensions+=(zip); fi
+          for extension in "${extensions[@]}"; do
+            asset="postgresql-$VERSION-$TARGET.$extension"
+            for file in "$asset" "$asset.sha256"; do
+              curl --fail --location --silent --show-error --retry 3 \
+                --proto '=https' --proto-redir '=https' \
+                "https://github.com/$GITHUB_REPOSITORY/releases/download/$VERSION/$file" -o "$file"
+            done
+            ./scripts/test-archive.sh "$asset" "$VERSION"
+          done

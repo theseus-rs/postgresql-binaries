@@ -16,9 +16,24 @@ echo "Brew prefix: $BREW_PREFIX"
 mkdir -p "$INSTALL_DIR/lib"
 
 # Function to get real path
-get_realpath() {
-    python3 -c "import os, sys; print(os.path.realpath(sys.argv[1]))" "$1"
-}
+get_realpath() (
+    path="$1"
+    links=0
+    while :; do
+        cd -P "$(dirname "$path")" || exit 1
+        path="$(basename "$path")"
+        if [ ! -L "$path" ]; then
+            printf '%s/%s\n' "$(pwd -P)" "$path"
+            exit 0
+        fi
+        links=$((links + 1))
+        if [ "$links" -gt 40 ]; then
+            echo "Too many symbolic links: $1" >&2
+            exit 1
+        fi
+        path=$(readlink "$path") || exit 1
+    done
+)
 
 sign_mach_o_files() {
     echo "Signing Mach-O files"
