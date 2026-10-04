@@ -18,6 +18,9 @@ RUN apk add --no-cache \
       gcc \
       gettext-dev \
       git \
+      jq \
+      icu \
+      icu-data-full \
       icu-dev \
       krb5-dev \
       libc-dev \
@@ -49,6 +52,9 @@ RUN update-ca-certificates && \
 
 WORKDIR /usr/src/postgresql
 
+COPY scripts/runtime-common.sh scripts/relocate-plpython.sh /usr/local/bin/
+RUN bash /usr/local/bin/relocate-plpython.sh /usr/src/postgresql
+
 ENV CLANG=clang-16
 ENV LLVM_CONFIG="/usr/lib/llvm16/bin/llvm-config"
 
@@ -76,11 +82,13 @@ RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
     make $([ $major_version -ge 15 ] && echo "install-world-bin" || echo "install") && \
     make -C contrib install
 
-# Update binary rpath to use a relative path.
-# LD_FLAGS=-Wl,-rpath,'$ORIGIN/../lib' should be used instead, but does not appear to work.
-RUN cd /opt/postgresql/bin && \
-    rpath=$(patchelf --print-rpath postgres | sed 's|/opt/postgresql/lib|$ORIGIN/../lib|g') && \
-    find ./ -type f -print0 | while IFS= read -r -d '' file; do patchelf --set-rpath $rpath $file; done
+COPY scripts/bundle-icu-data.sh /usr/local/bin/
+RUN bash /usr/local/bin/bundle-icu-data.sh /opt/postgresql
+
+# Audit executables, extension modules, and their transitive dependencies.
+COPY scripts/bundle-runtime.sh scripts/collect-notices.sh /usr/local/bin/
+RUN bash /usr/local/bin/bundle-runtime.sh /opt/postgresql && \
+    bash /usr/local/bin/collect-notices.sh /opt/postgresql
 
 RUN cp /usr/src/postgresql/COPYRIGHT /usr/src/postgresql/source-input.json /opt/postgresql
 
