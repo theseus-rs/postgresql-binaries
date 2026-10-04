@@ -20,7 +20,7 @@ if [[ "$TARGET" == *linux* ]]; then
     : "${RUNTIME_IMAGE:?Missing runtime image}"
     docker run --rm --platform "$PLATFORM" --user nobody \
         --volume "$temporary/$archive:/opt/test:ro" \
-        --tmpfs /tmp:mode=1777 "$RUNTIME_IMAGE" \
+        --tmpfs /usr/share/zoneinfo:ro --tmpfs /tmp:mode=1777 "$RUNTIME_IMAGE" \
         /bin/bash -c 'cd /opt/test && ./test.sh "$1"' bash "$version"
 else
     (cd "$temporary/$archive" && ./test.sh "$version")
