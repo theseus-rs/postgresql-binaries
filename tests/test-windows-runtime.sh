@@ -80,14 +80,19 @@ printf 'excluded\n' > "$prefix/Lib/site-packages/extra.py"
 pe_with_import "$prefix/python313.dll" kernel32.dll
 pe_with_import "$prefix/python.exe" python313.dll
 pe_with_import "$prefix/DLLs/_ssl.pyd" crypt32.dll
+# CPython's _wmi module imports the Windows Property System and delay-loads COM.
+pe_with_import "$prefix/DLLs/_wmi.pyd" PROPSYS.dll ole32.dll
 printf 'EDB dependency terms\n' > "$install/commandlinetools_3rd_party_licenses.txt"
 WINDOWS_PYTHON_ROOT="$prefix" bash "$helper" bundle "$install"
 test -f "$install/bin/Lib/os.py"
 test ! -e "$install/bin/Lib/site-packages"
 test -f "$install/bin/DLLs/_ssl.pyd"
+test -f "$install/bin/DLLs/_wmi.pyd"
+test ! -e "$install/bin/DLLs/propsys.dll"
 cmp "$prefix/LICENSE.txt" "$install/dependency-notices/python/LICENSE.txt"
 jq -e '.python_input.abi == "3.13" and .python_input.version == "3.13.9" and
-    (.audited_files | index("bin/DLLs/_ssl.pyd") != null) and (.missing_notices | length == 0)' \
+    (.audited_files | index("bin/DLLs/_ssl.pyd") != null) and
+    (.audited_files | index("bin/DLLs/_wmi.pyd") != null) and (.missing_notices | length == 0)' \
     "$install/runtime-dependencies.json" >/dev/null
 
 # Source builds carry PostgreSQL and vcpkg notices instead of EDB notices.

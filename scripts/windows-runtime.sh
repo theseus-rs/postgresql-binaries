@@ -48,7 +48,7 @@ windows_system_library() {
     case "$name" in
         api-ms-win-*|ext-ms-win-*|vcruntime140*|msvcp140*) return 0 ;;
     esac
-    local system=' kernel32 user32 advapi32 bcrypt ncrypt secur32 shell32 shlwapi crypt32 cryptbase normaliz winmm winspool rpcrt4 netapi32 iphlpapi dbghelp psapi imm32 usp10 dwmapi mswsock winhttp ws2_32 wsock32 ntdll ole32 oleaut32 comdlg32 gdi32 msvcrt ucrtbase version powrprof setupapi dnsapi wldap32 hid comctl32 cabinet userenv authz wintrust imagehlp shcore pdh delayimp avrt msimg32 oleacc uxtheme '
+    local system=' kernel32 user32 advapi32 bcrypt ncrypt secur32 shell32 shlwapi crypt32 cryptbase normaliz winmm winspool rpcrt4 netapi32 iphlpapi dbghelp psapi imm32 usp10 dwmapi mswsock winhttp ws2_32 wsock32 ntdll ole32 oleaut32 comdlg32 gdi32 msvcrt ucrtbase version powrprof setupapi dnsapi wldap32 hid comctl32 cabinet userenv authz wintrust imagehlp shcore pdh delayimp avrt msimg32 oleacc uxtheme propsys '
     [[ "$system" = *" $name "* ]]
 }
 
