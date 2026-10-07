@@ -81,7 +81,9 @@ fi
 if find ../lib -name 'plpython3.*' | grep -q .; then
     query "CREATE EXTENSION plpython3u"
     query 'CREATE FUNCTION portable_python() RETURNS text LANGUAGE plpython3u AS $$
-import ssl, json, zlib, decimal
+import ssl, json, zlib, decimal, sys
+if sys.platform == "win32" and sys.version_info >= (3, 12):
+    import _wmi
 return json.dumps({"value": str(decimal.Decimal("1.25"))})
 $$'
     test "$(query 'SELECT portable_python()')" = '{"value": "1.25"}'

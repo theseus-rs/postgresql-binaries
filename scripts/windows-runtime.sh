@@ -20,7 +20,9 @@ windows_imports() {
     # LLVM reads both Import and DelayImport directories and rejects malformed
     # PE files. Capture first so a failed audit cannot silently produce no DLLs.
     report=$(windows_readobj "$1") || return 1
-    printf '%s\n' "$report" | grep -Eq '^Format: COFF-' || runtime_die "Not a PE/COFF binary: $1"
+    # Read the entire report: grep -q can close the pipe early and make printf
+    # fail under pipefail for binaries with many imports, such as StackBuilder.
+    printf '%s\n' "$report" | grep -E '^Format: COFF-' >/dev/null || runtime_die "Not a PE/COFF binary: $1"
     while IFS= read -r name; do
         [[ "$name" =~ ^[a-z0-9_.+-]+$ ]] || runtime_die "Invalid imported DLL name: $name"
         printf '%s\n' "$name"
@@ -48,7 +50,7 @@ windows_system_library() {
     case "$name" in
         api-ms-win-*|ext-ms-win-*|vcruntime140*|msvcp140*) return 0 ;;
     esac
-    local system=' kernel32 user32 advapi32 bcrypt ncrypt secur32 shell32 shlwapi crypt32 cryptbase normaliz winmm winspool rpcrt4 netapi32 iphlpapi dbghelp psapi imm32 usp10 dwmapi mswsock winhttp ws2_32 wsock32 ntdll ole32 oleaut32 comdlg32 gdi32 msvcrt ucrtbase version powrprof setupapi dnsapi wldap32 hid comctl32 cabinet userenv authz wintrust imagehlp shcore pdh delayimp avrt msimg32 oleacc uxtheme '
+    local system=' kernel32 user32 advapi32 bcrypt ncrypt secur32 shell32 shlwapi crypt32 cryptbase normaliz winmm winspool rpcrt4 netapi32 iphlpapi dbghelp psapi imm32 usp10 dwmapi mswsock winhttp ws2_32 wsock32 ntdll ole32 oleaut32 comdlg32 gdi32 msvcrt ucrtbase version powrprof setupapi dnsapi wldap32 hid comctl32 cabinet userenv authz wintrust imagehlp shcore pdh delayimp avrt msimg32 oleacc uxtheme propsys '
     [[ "$system" = *" $name "* ]]
 }
 
