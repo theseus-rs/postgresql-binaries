@@ -118,4 +118,15 @@ jq -e '.python_input.abi == "3.13"' "$install/runtime-dependencies.json" >/dev/n
 rm "$vcpkg/share/openssl/copyright"
 if WINDOWS_PYTHON_ROOT="$prefix" VCPKG_INSTALLED="$vcpkg" bash "$helper" bundle-source "$install" > "$temporary/notices.log" 2>&1; then exit 1; fi
 grep -q 'Missing vcpkg redistribution notices' "$temporary/notices.log"
+# Large valid LLVM reports must not fail because a format check closes its
+# input early. Model a large import table without depending on pipe capacity.
+cat > "$temporary/large-readobj" <<'SCRIPT'
+#!/usr/bin/env bash
+printf 'Format: COFF-x86-64\n'
+awk 'BEGIN { for (i = 0; i < 20000; i++) print "  Symbol: fixture_symbol (0)" }'
+printf 'Import {\n  Name: KERNEL32.dll\n}\n'
+SCRIPT
+chmod +x "$temporary/large-readobj"
+imports=$(LLVM_READOBJ="$temporary/large-readobj" bash "$helper" imports "$install/bin/python313.dll")
+test "$imports" = kernel32.dll
 echo 'Windows license, ABI, normal/delay imports, malformed PE and bundled runtime checks passed'

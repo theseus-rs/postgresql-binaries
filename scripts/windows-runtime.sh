@@ -20,7 +20,9 @@ windows_imports() {
     # LLVM reads both Import and DelayImport directories and rejects malformed
     # PE files. Capture first so a failed audit cannot silently produce no DLLs.
     report=$(windows_readobj "$1") || return 1
-    printf '%s\n' "$report" | grep -Eq '^Format: COFF-' || runtime_die "Not a PE/COFF binary: $1"
+    # Read the entire report: grep -q can close the pipe early and make printf
+    # fail under pipefail for binaries with many imports, such as StackBuilder.
+    printf '%s\n' "$report" | grep -E '^Format: COFF-' >/dev/null || runtime_die "Not a PE/COFF binary: $1"
     while IFS= read -r name; do
         [[ "$name" =~ ^[a-z0-9_.+-]+$ ]] || runtime_die "Invalid imported DLL name: $name"
         printf '%s\n' "$name"
