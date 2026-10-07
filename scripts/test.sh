@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -eu
 
-[[ "${1:-}" =~ ^(14|15|16|17|18)\.[0-9]+\.[0-9]+$ ]]
+printf '%s\n' "${1:-}" | grep -Eq '^(14|15|16|17|18)\.[0-9]+\.[0-9]+$'
 
 postgresql_version=$(echo "$1" | awk -F. '{print ""$1"."$2}')
-version_num=$(awk -F. '{printf "%d%04d", $1, $2}' <<< "$1")
+version_num=$(printf '%s\n' "$1" | awk -F. '{printf "%d%04d", $1, $2}')
 port=${PGTEST_PORT:-65432}
 test_directory="$(pwd)"
 data_directory="$(mktemp -d)"
@@ -30,10 +30,17 @@ postgres="$(resolve_binary postgres)"
 initdb="$(resolve_binary initdb)"
 pg_ctl="$(resolve_binary pg_ctl)"
 psql="$(resolve_binary psql)"
+pg_restore="$(resolve_binary pg_restore)"
+pg_dump="$(resolve_binary pg_dump)"
+pg_config="$(resolve_binary pg_config)"
 
 test "$("$postgres" --version)" = "postgres (PostgreSQL) $postgresql_version"
 "$initdb" -A trust -U postgres -D "$data_directory" -E UTF8
 cleanup() {
+    status=$?
+    if [ "$status" -ne 0 ] && [ -f "$data_directory/server.log" ]; then
+        cat "$data_directory/server.log" >&2
+    fi
     "$pg_ctl" -w -D "$data_directory" stop >/dev/null 2>&1 || true
     rm -rf "$data_directory"
 }
@@ -50,13 +57,49 @@ query "SET TIME ZONE 'America/New_York'"
 test "$(query "SELECT extract(hour FROM timestamp '2026-01-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 7
 test "$(query "SELECT extract(hour FROM timestamp '2026-07-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 8
 
+# Builds with ICU must carry usable collation data after relocation, including
+# Alpine's separately packaged data. GNU ICU support is added independently.
+if "$pg_config" --configure | grep -q -- '--with-icu'; then
+    query "CREATE COLLATION portable_case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false)"
+    test "$(query "SELECT 'A' = 'a' COLLATE portable_case_insensitive")" = t
+    test "$(query "SELECT 'resume' = 'résumé' COLLATE portable_case_insensitive")" = f
+fi
+
+# Exercise libraries loaded only by extensions, not just postgres itself.
+query "CREATE EXTENSION pgcrypto; SELECT encode(digest('portable', 'sha256'), 'hex')"
+query "CREATE EXTENSION xml2; SELECT xml_is_well_formed('<portable/>')"
+query "CREATE EXTENSION hstore; SELECT 'a=>b'::hstore -> 'a'"
+query "CREATE TABLE portable_lz4(value text COMPRESSION lz4)"
+query "INSERT INTO portable_lz4 VALUES (repeat('portable-value-', 2000))"
+test "$(query 'SELECT pg_column_compression(value) FROM portable_lz4')" = lz4
+"$pg_dump" -h localhost -p "$port" -U postgres -d postgres -Fc -Z 1 -f "$data_directory/gzip.dump"
+"$pg_restore" -f "$data_directory/gzip.sql" "$data_directory/gzip.dump"
+if "$pg_config" --configure | grep -q -- '--with-zstd'; then
+    "$pg_dump" -h localhost -p "$port" -U postgres -d postgres -Fc --compress=zstd:1 -f "$data_directory/zstd.dump"
+    "$pg_restore" -f "$data_directory/zstd.sql" "$data_directory/zstd.dump"
+fi
+if find ../lib -name 'plpython3.*' | grep -q .; then
+    query "CREATE EXTENSION plpython3u"
+    query 'CREATE FUNCTION portable_python() RETURNS text LANGUAGE plpython3u AS $$
+import ssl, json, zlib, decimal, sys
+if sys.platform == "win32" and sys.version_info >= (3, 12):
+    import _wmi
+return json.dumps({"value": str(decimal.Decimal("1.25"))})
+$$'
+    test "$(query 'SELECT portable_python()')" = '{"value": "1.25"}'
+fi
+if find ../lib -name 'llvmjit.*' | grep -q .; then
+    test "$(query 'SELECT pg_jit_available()')" = t
+    query 'SET jit = on; SET jit_above_cost = 0; SELECT sum(i) FROM generate_series(1, 100) i'
+fi
+
 echo "Running tests..."
 set -x
 
 test "$("$psql" -qtAX -h localhost -p "$port" -U postgres -d postgres -c 'SHOW SERVER_VERSION')" = "$postgresql_version"
 test "$("$psql" -qtAX -h localhost -p "$port" -U postgres -d postgres -c 'SHOW server_version_num')" = "$version_num"
 test "$("$psql" -qtAX -h localhost -p "$port" -U postgres -d postgres -c 'SHOW SERVER_ENCODING')" = "UTF8"
-test "$("$psql" -tA -h localhost -p "$port" -U postgres -d postgres -c "SELECT extname FROM pg_extension WHERE extname = 'plpgsql'")" = "plpgsql"
+test "$(query "SELECT extname FROM pg_extension WHERE extname = 'plpgsql'")" = plpgsql
 
 set +x
 echo "tests completed successfully"
