@@ -94,4 +94,15 @@ jq -e '.python_input.abi == "3.13" and .python_input.version == "3.13.9" and
     (.audited_files | index("bin/DLLs/_ssl.pyd") != null) and
     (.audited_files | index("bin/DLLs/_wmi.pyd") != null) and (.missing_notices | length == 0)' \
     "$install/runtime-dependencies.json" >/dev/null
+# Large valid LLVM reports must not fail because a format check closes its
+# input early. Model a large import table without depending on pipe capacity.
+cat > "$temporary/large-readobj" <<'SCRIPT'
+#!/usr/bin/env bash
+printf 'Format: COFF-x86-64\n'
+awk 'BEGIN { for (i = 0; i < 20000; i++) print "  Symbol: fixture_symbol (0)" }'
+printf 'Import {\n  Name: KERNEL32.dll\n}\n'
+SCRIPT
+chmod +x "$temporary/large-readobj"
+imports=$(LLVM_READOBJ="$temporary/large-readobj" bash "$helper" imports "$install/bin/python313.dll")
+test "$imports" = kernel32.dll
 echo 'Windows license, ABI, normal/delay imports, malformed PE and bundled runtime checks passed'
