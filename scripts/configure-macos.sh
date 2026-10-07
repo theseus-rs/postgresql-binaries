@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-: "${GITHUB_ENV:?GITHUB_ENV is required}"
 : "${VERSION:?VERSION is required}"
 # Hosted Intel runners preinstall Python framework symlinks in /usr/local.
 # Overwrite those links while retaining the installed framework files.
@@ -17,12 +16,16 @@ for formula in icu4c libxml2 libxslt lz4 openssl@3 readline zstd; do
     ldflags="$ldflags -L$prefix/lib"
     pkg_config_path="$prefix/lib/pkgconfig${pkg_config_path:+:$pkg_config_path}"
 done
-{
-    echo "CPPFLAGS=$cppflags"
-    echo "LDFLAGS=$ldflags"
-    echo "PKG_CONFIG_PATH=$pkg_config_path"
-    echo "LLVM_CONFIG=$(brew --prefix llvm@16)/bin/llvm-config"
-    echo "CLANG=$(brew --prefix llvm@16)/bin/clang"
-    echo "PYTHON=$(brew --prefix python@3.13)/bin/python3.13"
-    echo "MACOSX_DEPLOYMENT_TARGET=15.0"
-} >> "$GITHUB_ENV"
+# Export to callers that source this helper, including local builds.
+export CPPFLAGS="$cppflags"
+export LDFLAGS="$ldflags"
+export PKG_CONFIG_PATH="$pkg_config_path"
+export LLVM_CONFIG="$(brew --prefix llvm@16)/bin/llvm-config"
+export CLANG="$(brew --prefix llvm@16)/bin/clang"
+export PYTHON="$(brew --prefix python@3.13)/bin/python3.13"
+export MACOSX_DEPLOYMENT_TARGET=15.0
+if [ -n "${GITHUB_ENV:-}" ]; then
+    for variable in CPPFLAGS LDFLAGS PKG_CONFIG_PATH LLVM_CONFIG CLANG PYTHON MACOSX_DEPLOYMENT_TARGET; do
+        printf '%s=%s\n' "$variable" "${!variable}"
+    done >> "$GITHUB_ENV"
+fi

@@ -15,6 +15,9 @@ repository=${GITHUB_REPOSITORY:-theseus-rs/postgresql-binaries}
 targets=$(sed -n 's/^            target: //p' "$root/.github/workflows/build.yml")
 test -n "$targets"
 for target in $targets; do
+    if [[ "$target" == aarch64-pc-windows-msvc && "${version%%.*}" -lt 16 ]]; then
+        continue
+    fi
     extensions=(tar.gz)
     if [[ "$target" == *windows* ]]; then extensions+=(zip); fi
     for extension in "${extensions[@]}"; do
