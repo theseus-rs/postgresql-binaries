@@ -9,6 +9,9 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 temporary=$(mktemp -d)
 trap 'rm -rf "$temporary"' EXIT
 archive="postgresql-$version-$TARGET"
+# Windows builds select their interpreter through actions/setup-python.
+if [[ "$TARGET" == *windows* ]]; then python_command=python; else python_command=python3; fi
+"$python_command" "$root/scripts/verify-archive.py" "$asset" "$archive"
 case "$asset" in
     *.tar.gz) tar xzf "$asset" -C "$temporary" ;;
     *.zip) unzip -q "$asset" -d "$temporary" ;;

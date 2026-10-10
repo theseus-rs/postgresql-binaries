@@ -20,7 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: sudo apt-get update && sudo apt-get install -y patchelf jq llvm
-      - run: |
+      - name: Test build helpers and archive portability
+        run: |
           for script in scripts/*.sh tests/*.sh; do bash -n "$script"; done
           for test in tests/test*.sh; do bash "$test"; done
 
@@ -43,7 +44,7 @@ jobs:
 
   build:
     name: Build
-    needs: [initialize]
+    needs: [initialize, regression]
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.initialize.outputs.ref }}
