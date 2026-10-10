@@ -422,6 +422,7 @@ jobs:
           fi
 
       - name: Upload archive artifacts
+        id: archive_artifacts
         if: ${{ steps.build_support.outputs.supported == 'true' && inputs.upload_artifacts == true }}
         uses: actions/upload-artifact@v7
         with:
@@ -429,6 +430,14 @@ jobs:
           path: artifacts/*
           if-no-files-found: error
           retention-days: 14
+
+      - name: Link archive artifacts
+        if: ${{ steps.archive_artifacts.outputs.artifact-url != '' }}
+        env:
+          ARTIFACT_URL: ${{ steps.archive_artifacts.outputs.artifact-url }}
+        run: |
+          echo "### PostgreSQL archives (${{ matrix.target }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Download archives and SHA-256 checksums]($ARTIFACT_URL) (retained for 14 days)." >> "$GITHUB_STEP_SUMMARY"
 
       #
       # Release
