@@ -21,6 +21,8 @@ jobs:
       - name: Display the version
         run: |
           echo "version is: $VERSION"
+      - name: Test archive portability for the release version
+        run: bash tests/test-archive-portability.sh "$VERSION"
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
