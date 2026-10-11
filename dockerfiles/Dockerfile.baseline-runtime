@@ -1,0 +1,6 @@
+# This context contains only the matching libc, a static shell, and user records.
+# PostgreSQL must provide all its other libraries from the relocated archive.
+FROM scratch
+COPY . /
+ENV PATH=/bin
+USER 65534:65534

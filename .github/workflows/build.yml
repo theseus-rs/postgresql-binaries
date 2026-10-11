@@ -17,199 +17,203 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.id }} (${{ matrix.target }}) (${{ matrix.os }})
+    name: ${{ matrix.id }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        id:
-          - linux-arm64
-          - linux-arm64-musl
-          - linux-arm
-          - linux-arm-musl
-          - linux-armhf
-          - linux-armhf-musl
-          - linux-armv5te
-          - linux-armv7l
-          - linux-armv7l-musl
-          - linux-x64
-          - linux-x64-musl
-          - linux-x86
-          - linux-x86-musl
-          - linux-i586
-          - linux-i586-musl
-          - linux-mips64le
-          - linux-powerpc64el
-          - linux-powerpc64el-musl
-          - linux-s390x
-          - linux-s390x-musl
-          - macos-arm64
-          - macos-x64
-          - windows-x64
-          - windows-arm64
-
         include:
-          # When adding a new target, define a new id above
-
-          #
-          # Linux
-          #
-
-          - id: linux-arm64
+          - id: aarch64-unknown-linux-gnu
             target: aarch64-unknown-linux-gnu
-            os: ubuntu-24.04-arm
+            os: ubuntu-latest
             platform: linux/arm64/v8
-            architecture: "AArch64"
+            architecture: AArch64
+            cflags: -O2 -march=armv8-a
+            qemu_cpu: cortex-a53
 
-          - id: linux-arm64-musl
+          - id: aarch64-unknown-linux-musl
             target: aarch64-unknown-linux-musl
-            os: ubuntu-24.04-arm
+            os: ubuntu-latest
             platform: linux/arm64/v8
-            architecture: "AArch64"
+            architecture: AArch64
+            cflags: -O2 -march=armv8-a
+            qemu_cpu: cortex-a53
 
-          - id: linux-arm
+          - id: arm-unknown-linux-gnueabi
             target: arm-unknown-linux-gnueabi
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v6
-            architecture: "ARM"
-
-          - id: linux-arm-musl
-            target: arm-unknown-linux-musleabi
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v6
-            architecture: "ARM"
-
-          - id: linux-armhf
-            target: arm-unknown-linux-gnueabihf
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v7
-            architecture: "ARM"
-
-          - id: linux-armhf-musl
-            target: arm-unknown-linux-musleabihf
-            os: ubuntu-24.04-arm
-            platform: linux/arm/v7
-            architecture: "ARM"
-
-          - id: linux-armv5te
-            target: armv5te-unknown-linux-gnueabi
-            os: ubuntu-24.04-arm
+            os: ubuntu-latest
             platform: linux/arm/v5
-            architecture: "ARM"
+            architecture: ARM
+            cflags: -O2 -march=armv6 -mfloat-abi=soft
+            qemu_cpu: arm1176
 
-          - id: linux-armv7l
+          - id: arm-unknown-linux-musleabihf
+            target: arm-unknown-linux-musleabihf
+            os: ubuntu-latest
+            platform: linux/arm/v6
+            architecture: ARM
+            cflags: -O2 -march=armv6 -mfloat-abi=hard -mfpu=vfp
+            qemu_cpu: arm1176
+
+          - id: armv5te-unknown-linux-gnueabi
+            target: armv5te-unknown-linux-gnueabi
+            os: ubuntu-latest
+            platform: linux/arm/v5
+            architecture: ARM
+            cflags: -O2 -march=armv5te -mfloat-abi=soft
+            qemu_cpu: arm926
+
+          - id: armv7-unknown-linux-gnueabihf
             target: armv7-unknown-linux-gnueabihf
-            os: ubuntu-24.04-arm
+            os: ubuntu-latest
             platform: linux/arm/v7
-            architecture: "ARM"
+            architecture: ARM
+            cflags: -O2 -march=armv7-a -mfloat-abi=hard -mfpu=vfp
+            qemu_cpu: cortex-a7
 
-          - id: linux-armv7l-musl
+          - id: armv7-unknown-linux-musleabihf
             target: armv7-unknown-linux-musleabihf
-            os: ubuntu-24.04-arm
+            os: ubuntu-latest
             platform: linux/arm/v7
-            architecture: "ARM"
+            architecture: ARM
+            cflags: -O2 -march=armv7-a -mfloat-abi=hard -mfpu=vfp
+            qemu_cpu: cortex-a7
 
-          - id: linux-x64
+          - id: x86_64-unknown-linux-gnu
             target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/amd64
-            architecture: "Advanced Micro Devices X86-64"
+            architecture: Advanced Micro Devices X86-64
+            cflags: -O2 -march=x86-64
+            qemu_cpu: qemu64,-sse3,-cx16,-lahf-lm
 
-          - id: linux-x64-musl
+          - id: x86_64-unknown-linux-musl
             target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/amd64
-            architecture: "Advanced Micro Devices X86-64"
+            architecture: Advanced Micro Devices X86-64
+            cflags: -O2 -march=x86-64
+            qemu_cpu: qemu64,-sse3,-cx16,-lahf-lm
 
-          - id: linux-x86
+          - id: i686-unknown-linux-gnu
             target: i686-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/386
-            architecture: "Intel 80386"
+            architecture: Intel 80386
+            cflags: -O2 -march=i686 -msse2 -mfpmath=sse
+            qemu_cpu: qemu32,-sse3
 
-          - id: linux-x86-musl
+          - id: i686-unknown-linux-musl
             target: i686-unknown-linux-musl
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/386
-            architecture: "Intel 80386"
+            architecture: Intel 80386
+            cflags: -O2 -march=i686 -msse2 -mfpmath=sse
+            qemu_cpu: qemu32,-sse3
 
-          - id: linux-i586
+          - id: arm-unknown-linux-musleabi
+            target: arm-unknown-linux-musleabi
+            os: ubuntu-latest
+            platform: linux/arm/v6
+            architecture: ARM
+            cflags: -O2 -march=armv6 -mfloat-abi=soft
+            qemu_cpu: arm1176,vfp=off
+            baseline_build: true
+
+          - id: arm-unknown-linux-gnueabihf
+            target: arm-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            platform: linux/arm/v6
+            architecture: ARM
+            cflags: -O2 -march=armv6 -mfloat-abi=hard -mfpu=vfp
+            qemu_cpu: arm1176
+            baseline_build: true
+
+          - id: i586-unknown-linux-gnu
             target: i586-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/386
-            architecture: "Intel 80386"
+            architecture: Intel 80386
+            cflags: -O2 -march=i586 -mno-sse -mno-sse2 -mfpmath=387
+            qemu_cpu: pentium
+            baseline_build: true
 
-          - id: linux-i586-musl
+          - id: i586-unknown-linux-musl
             target: i586-unknown-linux-musl
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             platform: linux/386
-            architecture: "Intel 80386"
+            architecture: Intel 80386
+            cflags: -O2 -march=i586 -mno-sse -mno-sse2 -mfpmath=387
+            qemu_cpu: pentium
+            baseline_build: true
 
-          - id: linux-mips64le
-            target: mips64-unknown-linux-gnuabi64
+          - id: mips64el-unknown-linux-gnuabi64
+            target: mips64el-unknown-linux-gnuabi64
             os: ubuntu-latest
             platform: linux/mips64le
-            architecture: "MIPS R3000"
+            architecture: MIPS R3000
+            cflags: -O2 -march=mips64r2
+            qemu_cpu: MIPS64R2-generic
 
-          - id: linux-powerpc64el
+          - id: powerpc64le-unknown-linux-gnu
             target: powerpc64le-unknown-linux-gnu
             os: ubuntu-latest
             platform: linux/ppc64le
-            architecture: "PowerPC64"
+            architecture: PowerPC64
+            cflags: -O2 -mcpu=power8
+            qemu_cpu: power8
 
-          - id: linux-powerpc64el-musl
+          - id: powerpc64le-unknown-linux-musl
             target: powerpc64le-unknown-linux-musl
             os: ubuntu-latest
             platform: linux/ppc64le
-            architecture: "PowerPC64"
+            architecture: PowerPC64
+            cflags: -O2 -mcpu=power8
+            qemu_cpu: power8
 
-          - id: linux-s390x
+          - id: s390x-unknown-linux-gnu
             target: s390x-unknown-linux-gnu
             os: ubuntu-latest
             platform: linux/s390x
-            architecture: "IBM S/390"
+            architecture: IBM S/390
+            cflags: -O2 -march=z196
+            qemu_cpu: z196-base,msa=off,dateh2=off,cmpsceh=off,pfpo=off,dfphp=off,dfp=off,emon=off,parseh=off,hfpue=off,hfpm=off,nonqks=off,csske=off,asnlxr=off,tods=off
 
-          - id: linux-s390x-musl
+          - id: s390x-unknown-linux-musl
             target: s390x-unknown-linux-musl
             os: ubuntu-latest
             platform: linux/s390x
-            architecture: "IBM S/390"
+            architecture: IBM S/390
+            cflags: -O2 -march=z196
+            qemu_cpu: z196-base,msa=off,dateh2=off,cmpsceh=off,pfpo=off,dfphp=off,dfp=off,emon=off,parseh=off,hfpue=off,hfpm=off,nonqks=off,csske=off,asnlxr=off,tods=off
 
-          #
-          # MacOS
-          #
-
-          - id: macos-arm64
+          - id: aarch64-apple-darwin
             target: aarch64-apple-darwin
             os: macos-15
-            architecture: "arm64"
+            architecture: arm64
 
-          - id: macos-x64
+          - id: x86_64-apple-darwin
             target: x86_64-apple-darwin
             os: macos-15-intel
-            architecture: "x86_64"
+            architecture: x86_64
 
-          #
-          # Windows
-          #
-
-          - id: windows-x64
+          - id: x86_64-pc-windows-msvc
             target: x86_64-pc-windows-msvc
             os: windows-latest
-            architecture: "x86-64"
-            msvc_arch: "x64"
+            architecture: x86-64
+            msvc_arch: x64
             pe_machine: "0x8664"
-            python_architecture: "x64"
-            vcpkg_triplet: "x64-windows"
+            python_architecture: x64
+            vcpkg_triplet: x64-windows
 
-          - id: windows-arm64
+          - id: aarch64-pc-windows-msvc
             target: aarch64-pc-windows-msvc
             os: windows-11-arm
-            architecture: "AArch64"
-            msvc_arch: "arm64"
+            architecture: AArch64
+            msvc_arch: arm64
             pe_machine: "0xaa64"
-            python_architecture: "arm64"
-            vcpkg_triplet: "arm64-windows"
+            python_architecture: arm64
+            vcpkg_triplet: arm64-windows
 
     defaults:
       run:
@@ -250,7 +254,7 @@ jobs:
         run: |
           supported=true
 
-          if [[ "${{ matrix.id }}" == "windows-arm64" && "$POSTGRESQL_MAJOR_VERSION" -lt 16 ]]; then
+          if [[ "${{ matrix.target }}" == "aarch64-pc-windows-msvc" && "$POSTGRESQL_MAJOR_VERSION" -lt 16 ]]; then
             echo "::notice::Windows ARM64 source builds require PostgreSQL 16 or newer; skipping PostgreSQL $POSTGRESQL_VERSION."
             supported=false
           fi
@@ -262,8 +266,29 @@ jobs:
       # Linux Build
       #
 
+      - name: Set up baseline CPU emulation
+        if: ${{ matrix.baseline_build == true }}
+        run: docker run --privileged --rm tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 --install all # 2026-09-27
+
+      - name: Check baseline CPU enforcement
+        if: ${{ matrix.baseline_build == true }}
+        timeout-minutes: 2
+        env:
+          TARGET: ${{ matrix.target }}
+          PLATFORM: ${{ matrix.platform }}
+          QEMU_CPU: ${{ matrix.qemu_cpu }}
+        run: ./scripts/test-baseline-cpu.sh
+
+      - name: Install source build prerequisites
+        if: ${{ matrix.baseline_build == true }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bzip2 cpio file git jq patchelf patch perl python3 rsync unzip wget
+
       - name: Build (Linux)
-        if: ${{ startsWith(matrix.id, 'linux-') }}
+        env:
+          TARGET_CFLAGS: ${{ matrix.cflags }}
+        if: ${{ contains(matrix.target, '-linux-') }}
         run: ./scripts/build-linux.sh "$VERSION" "${{ matrix.target }}" "${{ matrix.platform }}"
 
       #
@@ -271,13 +296,13 @@ jobs:
       #
 
       - name: Test macOS build helpers
-        if: ${{ startsWith(matrix.id, 'macos-') }}
+        if: ${{ contains(matrix.target, '-apple-') }}
         run: |
           bash tests/test-macos-options.sh
           bash tests/test-macos-symlinks.sh
 
       - name: Build (MacOS)
-        if: ${{ startsWith(matrix.id, 'macos-') }}
+        if: ${{ contains(matrix.target, '-apple-') }}
         run: ./scripts/build-macos.sh "$VERSION" "${{ matrix.target }}"
 
       #
@@ -285,20 +310,20 @@ jobs:
       #
 
       - name: Setup Python (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        if: ${{ contains(matrix.target, '-windows-') && steps.build_support.outputs.supported == 'true' }}
         uses: actions/setup-python@v6
         with:
           python-version: "3.x"
           architecture: ${{ matrix.python_architecture }}
 
       - name: Configure MSVC (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        if: ${{ contains(matrix.target, '-windows-') && steps.build_support.outputs.supported == 'true' }}
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.msvc_arch }}
 
       - name: Build (Windows)
-        if: ${{ startsWith(matrix.id, 'windows-') && steps.build_support.outputs.supported == 'true' }}
+        if: ${{ contains(matrix.target, '-windows-') && steps.build_support.outputs.supported == 'true' }}
         run: ./scripts/build-windows.sh "$VERSION" "${{ matrix.target }}" "${{ matrix.vcpkg_triplet }}"
 
       #
@@ -306,9 +331,17 @@ jobs:
       #
 
       - name: Check redistribution notices
-        if: ${{ inputs.release == true && !startsWith(matrix.id, 'windows-') }}
+        if: ${{ inputs.release == true && !contains(matrix.target, '-windows-') }}
         run: |
           jq -e '(.missing_notices // []) | length == 0' "$INSTALL_DIRECTORY/runtime-dependencies.json"
+
+      - name: Validate binary target compatibility
+        if: ${{ steps.build_support.outputs.supported == 'true' }}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          if [[ "$TARGET" == *windows* ]]; then python_command=python; else python_command=python3; fi
+          "$python_command" scripts/verify-target.py "$INSTALL_DIRECTORY" "$TARGET"
 
       - name: Prepare archive
         if: ${{ steps.build_support.outputs.supported == 'true' }}
@@ -319,7 +352,7 @@ jobs:
       # The .tar.gz archive is the primary archive for all platforms.  This archive
       # provides a consistent experience for programmatic cases (e.g. embedded).
       - name: Build archive (Linux, MacOS)
-        if: ${{ steps.build_support.outputs.supported == 'true' && !startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && !contains(matrix.target, '-windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           ./scripts/checksum.sh "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
@@ -327,7 +360,7 @@ jobs:
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
 
       - name: Build archive (Windows)
-        if: ${{ steps.build_support.outputs.supported == 'true' && startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && contains(matrix.target, '-windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           ./scripts/checksum.sh "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
@@ -336,7 +369,7 @@ jobs:
 
       # The zip archive for Windows is created as a convenience to users for manual installations.
       - name: Build .zip archive (Windows)
-        if: ${{ steps.build_support.outputs.supported == 'true' && startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && contains(matrix.target, '-windows-') }}
         run: |
           7z a "$ARCHIVE.zip" "$ARCHIVE"
           ./scripts/checksum.sh "$ARCHIVE.zip" > "$ARCHIVE.zip.sha256"
@@ -347,59 +380,16 @@ jobs:
       # Test
       #
 
-      - name: Test the binary file cpu architecture
-        if: ${{ steps.build_support.outputs.supported == 'true' }}
-        run: |
-          postgres_file="$INSTALL_DIRECTORY/bin/postgres"
-          
-          if [[ "${{ matrix.id }}" == windows-* ]]; then
-            postgres_file="$INSTALL_DIRECTORY/bin/postgres.exe"
-            cpu_architecture=$(python - "$postgres_file" <<'PY'
-          import pathlib
-          import struct
-          import sys
-
-          path = pathlib.Path(sys.argv[1])
-          data = path.read_bytes()
-
-          if data[:2] != b'MZ':
-              raise SystemExit(f"{path} is not a PE executable")
-
-          pe_offset = struct.unpack_from('<I', data, 0x3c)[0]
-          if data[pe_offset:pe_offset + 4] != b'PE\0\0':
-              raise SystemExit(f"{path} is missing a PE header")
-
-          machine = struct.unpack_from('<H', data, pe_offset + 4)[0]
-          sys.stdout.write(f"0x{machine:04x}")
-          PY
-            )
-          elif [[ "${{ matrix.id }}" == linux-* ]]; then
-            cpu_architecture=$(readelf --file-header "$postgres_file" | grep 'Machine:')
-          else
-            cpu_architecture=$(file "$postgres_file")
-          fi
-          
-          echo "CPU_ARCHITECTURE=$cpu_architecture" | tee -a $GITHUB_ENV
-          
-          if [[ "${{ matrix.id }}" == windows-* ]]; then
-            if [[ "$cpu_architecture" != "${{ matrix.pe_machine }}" ]]; then
-              echo "ERROR: CPU architecture ($cpu_architecture) does not match expected architecture (${{ matrix.pe_machine }})"
-              exit 1
-            fi
-          else
-            if [[ "$cpu_architecture" != *"${{ matrix.architecture }}"* ]]; then
-              echo "ERROR: CPU architecture ($cpu_architecture) does not match expected architecture (${{ matrix.architecture }})"
-              exit 1
-            fi
-          fi
-
       - name: Test build / archive
         if: ${{ steps.build_support.outputs.supported == 'true' }}
         env:
           TARGET: ${{ matrix.target }}
           PLATFORM: ${{ matrix.platform }}
+          QEMU_CPU: ${{ matrix.qemu_cpu }}
         run: |
-          if [[ "$TARGET" == *musl* ]]; then
+          if [ -n "${RUNTIME_IMAGE:-}" ]; then
+            : # Source-built targets provide their matching minimal runtime.
+          elif [[ "$TARGET" == *musl* ]]; then
             export RUNTIME_IMAGE=alpine:3.19.0@sha256:51b67269f354137895d43f3b3d810bfacd3945438e94dc5ac55fdac340352f48
           elif [[ "$TARGET" == *linux* ]]; then
             export RUNTIME_IMAGE=debian:12.4@sha256:79becb70a6247d277b59c09ca340bbe0349af6aacb5afa90ec349528b53ce2c9
@@ -416,6 +406,7 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           PLATFORM: ${{ matrix.platform }}
+          QEMU_CPU: ${{ matrix.qemu_cpu }}
           RUNTIME_IMAGE: postgresql-test-icu:local
         run: |
           docker build --platform "$PLATFORM" -f dockerfiles/Dockerfile.test-icu -t "$RUNTIME_IMAGE" .
@@ -465,7 +456,7 @@ jobs:
           ./scripts/verify-checksum.sh "draft-check/$ASSET" "$ASSET.tested.sha256"
 
       - name: Upload release archive (Windows)
-        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.release == true && startsWith(matrix.id, 'windows-') }}
+        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.release == true && contains(matrix.target, '-windows-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

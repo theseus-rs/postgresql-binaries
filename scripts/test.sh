@@ -68,6 +68,10 @@ test "$(query "SELECT count(DISTINCT value COLLATE portable_case_insensitive) FR
 query "CREATE EXTENSION pgcrypto; SELECT encode(digest('portable', 'sha256'), 'hex')"
 query "CREATE EXTENSION xml2; SELECT xml_is_well_formed('<portable/>')"
 query "CREATE EXTENSION hstore; SELECT 'a=>b'::hstore -> 'a'"
+if "$pg_config" --configure | grep -q -- '--with-uuid'; then
+    query 'CREATE EXTENSION "uuid-ossp"'
+    test "$(query "SELECT uuid_generate_v5(uuid_ns_dns(), 'portable')")" = 4aad8b17-6aef-52c3-8e21-40832eaacbdb
+fi
 query "CREATE TABLE portable_lz4(value text COMPRESSION lz4)"
 query "INSERT INTO portable_lz4 VALUES (repeat('portable-value-', 2000))"
 test "$(query 'SELECT pg_column_compression(value) FROM portable_lz4')" = lz4

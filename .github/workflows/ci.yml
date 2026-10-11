@@ -24,6 +24,7 @@ jobs:
         run: |
           for script in scripts/*.sh tests/*.sh; do bash -n "$script"; done
           for test in tests/test*.sh; do bash "$test"; done
+          python3 -m unittest discover -s tests -p 'test_*.py'
 
   initialize:
     name: Initialize

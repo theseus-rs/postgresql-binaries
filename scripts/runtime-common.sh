@@ -70,7 +70,8 @@ runtime_system_library() {
     if [ "${2:-elf}" = macho ]; then
         [[ "$1" = /usr/lib/* || "$1" = /System/Library/* ]]
     else
-        [[ "$1" =~ ^(ld-linux[^/]*|ld64)\.so(\.[0-9]+)*$ ||
+        [[ "$1" = libc.so ||
+           "$1" =~ ^(ld-linux[^/]*|ld64)\.so(\.[0-9]+)*$ ||
            "$1" =~ ^(ld-musl-[^/]+|libc\.musl-[^/]+)\.so\.1$ ||
            "$1" =~ ^lib(c|m|dl|pthread|rt|resolv|util|anl)\.so\.[0-9]+$ ]]
     fi

@@ -41,7 +41,7 @@ jobs:
             const artifacts = (await github.paginate(
               github.rest.actions.listWorkflowRunArtifacts,
               { ...repo, run_id: run.id, per_page: 100 },
-            )).filter(artifact => !artifact.expired && /^postgresql-[a-z0-9-]+$/.test(artifact.name))
+            )).filter(artifact => !artifact.expired && /^postgresql-[a-z0-9_-]+$/.test(artifact.name))
               .sort((a, b) => a.name.localeCompare(b.name));
 
             const runUrl = `${context.serverUrl}/${repo.owner}/${repo.repo}/actions/runs/${run.id}`;

@@ -6,6 +6,8 @@ set -eo pipefail
 script_directory=$(cd "$(dirname "$0")" && pwd)
 source "$script_directory/runtime-common.sh"
 root=$(cd "${1:?Usage: bundle-runtime.sh <install_directory>}" && pwd -P)
+sysroot=${RUNTIME_SYSROOT:-}
+if [ -n "$sysroot" ]; then sysroot=$(cd "$sysroot" && pwd -P); fi
 library_dir="$root/lib"
 mkdir -p "$library_dir"
 format=elf
@@ -33,7 +35,11 @@ for file in "${queue[@]}"; do
     if [[ "${file##*/}" = plpython* ]]; then
         # Resolve the configured interpreter's symlink to its base installation;
         # the executable name identifies its version without a Python helper.
-        interpreter=$(command -v "${PYTHON:-python3}")
+        if [ -n "$sysroot" ]; then
+            interpreter="$sysroot/usr/bin/python3"
+        else
+            interpreter=$(command -v "${PYTHON:-python3}")
+        fi
         interpreter=$(runtime_realpath "$interpreter")
         prefix=$(dirname "$(dirname "$interpreter")")
         python_name=${interpreter##*/}
@@ -46,14 +52,16 @@ for file in "${queue[@]}"; do
         break
     fi
 done
-for file in "${queue[@]}"; do
-    if [ "${file%/*}" = "$library_dir" ]; then
+# Include installed SONAME aliases, which the regular-file audit queue omits.
+# They must win over a binary's original build/sysroot RPATH.
+for file in "$library_dir"/*; do
+    if [ -f "$file" ] && runtime_is_binary "$file" "$format"; then
         initial_names+=("${file##*/}")
         initial_files+=("$file")
     fi
 done
-search=("$library_dir" /lib /usr/lib /usr/local/lib)
-for directory in /lib/*-linux-* /usr/lib/*-linux-* /usr/lib/llvm*/lib; do
+search=("$library_dir" "$sysroot/lib" "$sysroot/usr/lib" "$sysroot/usr/local/lib")
+for directory in "$sysroot"/lib/*-linux-* "$sysroot"/usr/lib/*-linux-* "$sysroot"/usr/lib/llvm*/lib; do
     [ ! -d "$directory" ] || search+=("$directory")
 done
 
@@ -90,6 +98,9 @@ resolve_dependency() {
             [ -n "$candidate" ] || continue
             candidate=${candidate//\$\{ORIGIN\}/${binary%/*}}
             candidate=${candidate//\$ORIGIN/${binary%/*}}
+            if [ -n "$sysroot" ] && [[ "$candidate" = /* && "$candidate" != "$root/"* && "$candidate" != "$sysroot/"* ]]; then
+                candidate="$sysroot$candidate"
+            fi
             candidates+=("$candidate")
         done
         candidates+=("${search[@]}")
@@ -135,6 +146,9 @@ while [ "$index" -lt "${#queue[@]}" ]; do
         fi
         source_file=$(resolve_dependency "$name" "$original")
         source_file=$(runtime_realpath "$source_file")
+        if [ -n "$sysroot" ] && [[ "$source_file" != "$root/"* && "$source_file" != "$sysroot/"* ]]; then
+            runtime_die "Dependency escapes target sysroot: $source_file"
+        fi
         [ -f "$source_file" ] || runtime_die "Missing $name required by $binary"
         if [[ "$source_file" = "$root/"* ]]; then
             destination=$source_file
