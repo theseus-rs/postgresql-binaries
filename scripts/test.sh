@@ -57,13 +57,12 @@ query "SET TIME ZONE 'America/New_York'"
 test "$(query "SELECT extract(hour FROM timestamp '2026-01-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 7
 test "$(query "SELECT extract(hour FROM timestamp '2026-07-15 12:00' AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')")" = 8
 
-# Builds with ICU must carry usable collation data after relocation, including
-# Alpine's separately packaged data. GNU ICU support is added independently.
-if "$pg_config" --configure | grep -q -- '--with-icu'; then
-    query "CREATE COLLATION portable_case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false)"
-    test "$(query "SELECT 'A' = 'a' COLLATE portable_case_insensitive")" = t
-    test "$(query "SELECT 'resume' = 'résumé' COLLATE portable_case_insensitive")" = f
-fi
+# ICU must work with the bundled version, regardless of the host's ICU ABI.
+query "CREATE COLLATION portable_case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false)"
+test "$(query "SELECT 'A' = 'a' COLLATE portable_case_insensitive")" = t
+# Keep command-line SQL ASCII-only: Windows psql may receive ANSI-encoded argv.
+test "$(query "SELECT 'resume' = U&'r\00E9sum\00E9' COLLATE portable_case_insensitive")" = f
+test "$(query "SELECT count(DISTINCT value COLLATE portable_case_insensitive) FROM (VALUES ('A'), ('a'), ('b')) AS values_to_compare(value)")" = 2
 
 # Exercise libraries loaded only by extensions, not just postgres itself.
 query "CREATE EXTENSION pgcrypto; SELECT encode(digest('portable', 'sha256'), 'hex')"

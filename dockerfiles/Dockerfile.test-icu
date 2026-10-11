@@ -1,0 +1,6 @@
+# Ubuntu 24.04 (ICU 74; PostgreSQL's GNU build uses Debian 12's ICU 72).
+FROM ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libicu74 && \
+    rm -rf /var/lib/apt/lists/*

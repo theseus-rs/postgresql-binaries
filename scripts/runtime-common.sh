@@ -78,9 +78,10 @@ runtime_system_library() {
 
 runtime_copy_stdlib() {
     mkdir -p "$2"
-    # tar preserves symlinks and modes, while excluding development/test files
-    # at every level. Both BSD tar and GNU tar support these exclusions.
+    # Preserve symlinks and modes, but omit host Python customization (including
+    # legacy bytecode) and development/test files.
     tar -C "$1" --exclude=site-packages --exclude=dist-packages \
+        --exclude='sitecustomize.py*' \
         --exclude=__pycache__ --exclude=test --exclude=tests --exclude='config-*' -cf - . |
         tar -C "$2" -xf -
 }

@@ -411,6 +411,16 @@ jobs:
             cp "$WINDOWS_ASSET_SUM" "$WINDOWS_ASSET.tested.sha256"
           fi
 
+      - name: Test with a different system ICU
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'aarch64-unknown-linux-gnu' }}
+        env:
+          TARGET: ${{ matrix.target }}
+          PLATFORM: ${{ matrix.platform }}
+          RUNTIME_IMAGE: postgresql-test-icu:local
+        run: |
+          docker build --platform "$PLATFORM" -f dockerfiles/Dockerfile.test-icu -t "$RUNTIME_IMAGE" .
+          ./scripts/test-archive.sh "$ASSET" "$VERSION"
+
       - name: Stage archive artifacts
         if: ${{ steps.build_support.outputs.supported == 'true' && inputs.upload_artifacts == true }}
         run: |
