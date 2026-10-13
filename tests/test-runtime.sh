@@ -13,7 +13,7 @@ runtime_is_binary "$temporary/python.o"
 printf '\002' | dd of="$temporary/python.o" bs=1 seek=5 conv=notrunc 2>/dev/null
 printf '\000\003' | dd of="$temporary/python.o" bs=1 seek=16 conv=notrunc 2>/dev/null
 runtime_is_binary "$temporary/python.o"
-for name in libc.so.6 libm.so.6 libc.musl-x86_64.so.1 ld-linux-x86-64.so.2; do runtime_system_library "$name"; done
+for name in libc.so libc.so.6 libm.so.6 libc.musl-x86_64.so.1 ld-linux-x86-64.so.2; do runtime_system_library "$name"; done
 for name in libxml2.so.2 libicuuc.so.72 libssl.so.3 libstdc++.so.6 libpython3.11.so.1.0 libcrypto.so.3; do
     if runtime_system_library "$name"; then exit 1; fi
 done

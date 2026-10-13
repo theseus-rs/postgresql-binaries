@@ -18,7 +18,13 @@ PLATFORM="$3"
 
 # Install emulators for builds targeting another CPU architecture.
 # tonistiigi/binfmt:latest, resolved 2026-09-27
-docker run --privileged --rm tonistiigi/binfmt --install all
+docker run --privileged --rm tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 --install all
+
+case "$TARGET" in
+  i586-unknown-linux-gnu|i586-unknown-linux-musl|arm-unknown-linux-gnueabihf|arm-unknown-linux-musleabi)
+    exec "$ROOT_DIRECTORY/scripts/build-baseline-linux.sh" "$VERSION" "$TARGET" "$PLATFORM"
+    ;;
+esac
 
 if [[ "$TARGET" == *musl* ]]; then
   DOCKERFILE="dockerfiles/Dockerfile.linux-musl"
@@ -27,7 +33,7 @@ else
 fi
 
 docker buildx build --file "$DOCKERFILE" --load \
-  --build-arg "POSTGRESQL_VERSION=$VERSION" --platform "$PLATFORM" \
+  --build-arg "POSTGRESQL_VERSION=$VERSION" --build-arg "TARGET_CFLAGS=${TARGET_CFLAGS:--O2}" --platform "$PLATFORM" \
   --tag postgresql-build:latest .
 
 container_id="$(docker create --platform "$PLATFORM" postgresql-build:latest)"

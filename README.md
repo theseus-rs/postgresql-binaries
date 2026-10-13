@@ -75,6 +75,19 @@ docker run --rm --platform linux/amd64 \
 
 Archive creation and release uploads are handled by the GitHub Actions workflow.
 
+The i586 GNU/musl, ARMv6 GNU hard-float, and ARMv6 musl soft-float targets use a
+pinned Buildroot source build for their libc and dependencies. These builds also
+require the Linux host tools listed in the workflow's source-build prerequisites.
+Set `BUILDROOT_CACHE` to retain downloaded sources and build outputs. Their minimal
+test images are named `postgresql-runtime:<target>` and contain the matching libc
+and a shell; other runtime libraries must come from the packaged archive. CI runs
+them under Pentium or ARM1176 emulation, with VFP disabled for soft-float musl.
+The GNU source builds pin the glibc 2.36 maintenance branch to retain the existing
+Debian 12 libc floor. Archive validation also rejects newer required GLIBC symbols.
+
+CI job IDs and artifact names use the target triples. Required build checks use
+`Build / <target>`, independently of the selected GitHub runner.
+
 ## License
 
 PostgreSQL is covered under [The PostgreSQL License](https://opensource.org/licenses/postgresql).
