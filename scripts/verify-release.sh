@@ -3,9 +3,9 @@
 set -euo pipefail
 version="${1:?Usage: verify-release.sh <version> <draft|public>}"
 mode="${2:?Missing download mode}"
-[[ "$version" =~ ^(14|15|16|17|18)\.[0-9]+\.[0-9]+$ ]]
 [[ "$mode" == draft || "$mode" == public ]]
 root=$(cd "$(dirname "$0")/.." && pwd)
+sh "$root/scripts/postgresql-versions.sh" validate "$version"
 temporary=$(mktemp -d)
 trap 'rm -rf "$temporary"' EXIT
 repository=${GITHUB_REPOSITORY:-theseus-rs/postgresql-binaries}
@@ -19,7 +19,7 @@ PYTHON
 )
 test -n "$targets"
 for target in $targets; do
-    if [[ "$target" == aarch64-pc-windows-msvc && "${version%%.*}" -lt 16 ]]; then
+    if [ "$(sh "$root/scripts/postgresql-versions.sh" supports-target "$version" "$target")" = false ]; then
         continue
     fi
     extensions=(tar.gz)

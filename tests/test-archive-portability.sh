@@ -5,8 +5,8 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 if [ "$#" -eq 0 ]; then
     # The normal regression suite covers every supported PostgreSQL major.
     # An explicit project version also covers older or future archive names.
-    for major in 14 15 16 17 18; do
-        bash "$root/tests/test-archive-portability.sh" "$major.0.0"
+    for version in $(sh "$root/scripts/postgresql-versions.sh" oldest); do
+        bash "$root/tests/test-archive-portability.sh" "$version"
     done
     exit 0
 fi

@@ -17,7 +17,7 @@ case "$asset" in
     *.zip) unzip -q "$asset" -d "$temporary" ;;
     *) exit 1 ;;
 esac
-cp "$root/scripts/test.sh" "$temporary/$archive/test.sh"
+cp "$root/scripts/test.sh" "$root/scripts/postgresql-versions.sh" "$temporary/$archive/"
 if [[ "$TARGET" == *linux* ]]; then
     : "${PLATFORM:?Missing container platform}"
     : "${RUNTIME_IMAGE:?Missing runtime image}"

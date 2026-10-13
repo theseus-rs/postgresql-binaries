@@ -53,6 +53,7 @@ case " $* " in
         esac
         ;;
     *' archive '*) printf '%s\n' 'test source archive' ;;
+    *' apply '*) exit 0 ;;
     *) exit 42 ;;
 esac
 SH
@@ -96,7 +97,7 @@ test ! -e "$temporary/wrong-tag"
 # Git Bash provides sha256sum but not shasum. Source metadata must still
 # contain the correct digest without depending on a Perl installation.
 mkdir "$temporary/source-bin"
-for tool in bash cat dirname git grep mkdir mktemp mv rm sha256sum; do
+for tool in bash sh cat dirname git grep mkdir mktemp mv rm sha256sum; do
     ln -s "$(command -v "$tool")" "$temporary/source-bin/$tool"
 done
 PATH="$temporary/source-bin" "$root/scripts/fetch-source.sh" "$version" "$temporary/sha256sum source"

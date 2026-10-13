@@ -18,7 +18,7 @@ cd "$ROOT_DIRECTORY"
 
 VCPKG_TRIPLET="$3"
 
-if [[ "$TARGET" == "aarch64-pc-windows-msvc" && "$POSTGRESQL_MAJOR_VERSION" -lt 16 ]]; then
+if [ "$(sh "$ROOT_DIRECTORY/scripts/postgresql-versions.sh" supports-target "$VERSION" "$TARGET")" = false ]; then
   echo "Windows ARM64 source builds require PostgreSQL 16 or newer." >&2
   exit 1
 fi

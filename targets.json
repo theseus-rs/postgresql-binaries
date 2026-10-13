@@ -337,7 +337,11 @@
     "architecture": "x86-64",
     "enabled": true,
     "cpu": "x86_64",
-    "bits": 64
+    "bits": 64,
+    "msvc_arch": "x64",
+    "pe_machine": "0x8664",
+    "python_architecture": "x64",
+    "vcpkg_triplet": "x64-windows"
   },
   {
     "id": "aarch64-pc-windows-msvc",
@@ -346,6 +350,10 @@
     "architecture": "AArch64",
     "enabled": true,
     "cpu": "aarch64",
-    "bits": 64
+    "bits": 64,
+    "msvc_arch": "arm64",
+    "pe_machine": "0xaa64",
+    "python_architecture": "arm64",
+    "vcpkg_triplet": "arm64-windows"
   }
 ]

@@ -4,10 +4,8 @@ set -euo pipefail
 
 version="${1:?Usage: fetch-source.sh <major.minor.revision> <destination>}"
 destination="${2:?Missing destination}"
-if [[ ! "$version" =~ ^(14|15|16|17|18)\.[0-9]+\.[0-9]+$ ]]; then
-    echo "Unsupported or malformed PostgreSQL version: $version" >&2
-    exit 1
-fi
+script_directory=$(cd "$(dirname "$0")" && pwd)
+sh "$script_directory/postgresql-versions.sh" validate "$version"
 upstream_version="${version%.*}"
 tag="REL_${upstream_version//./_}"
 url=https://git.postgresql.org/git/postgresql.git
@@ -63,8 +61,25 @@ if ! grep -Fq "AC_INIT([PostgreSQL], [$upstream_version]" "$checkout/configure.a
     exit 1
 fi
 
-# The URLs are constant; all other interpolated fields are validated above and
-# contain only release-tag characters or hexadecimal digits, so need no escaping.
+# Apply version-specific upstream compatibility fixes consistently on every OS.
+# Record their hashes separately from the unmodified upstream Git archive.
+source_patches=''
+for source_patch in $(sh "$script_directory/postgresql-versions.sh" source-patches "$version"); do
+    patch_file="$script_directory/patches/$source_patch"
+    git -C "$checkout" apply --check "$patch_file"
+    git -C "$checkout" apply "$patch_file"
+    if command -v sha256sum > /dev/null 2>&1; then
+        patch_digest=$(sha256sum -b < "$patch_file")
+    else
+        patch_digest=$(shasum -a 256 -b < "$patch_file")
+    fi
+    patch_digest="${patch_digest%% *}"
+    [[ "$patch_digest" =~ ^[0-9a-f]{64}$ ]]
+    source_patches="${source_patches:+$source_patches, }{\"patch\": \"$source_patch\", \"sha256\": \"$patch_digest\"}"
+done
+
+# URLs and patch names come from repository policy; versions and hashes above
+# are validated release-tag characters or hexadecimal digits.
 cat > "$checkout/source-input.json" <<JSON
 {
   "url": "$url",
@@ -72,6 +87,7 @@ cat > "$checkout/source-input.json" <<JSON
   "commit": "$commit",
   "version": "$upstream_version",
   "git_archive_sha256": "$digest",
+  "source_patches": [$source_patches],
   "authentication": "upstream HTTPS with CA validation",
   "signature_verified": false
 }

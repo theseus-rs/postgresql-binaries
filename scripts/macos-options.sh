@@ -4,10 +4,7 @@
 : "${VERSION:?VERSION is required}"
 : "${SOURCE_DIRECTORY:?SOURCE_DIRECTORY is required}"
 : "${INSTALL_DIRECTORY:?INSTALL_DIRECTORY is required}"
-[[ "$VERSION" =~ ^(14|15|16|17|18)\.[0-9]+\.[0-9]+$ ]] || {
-    echo "Unsupported or malformed version: $VERSION" >&2
-    return 1
-}
+sh "$(dirname "${BASH_SOURCE[0]}")/postgresql-versions.sh" validate "$VERSION" || return 1
 major_version="${VERSION%%.*}"
 configure_options=(
     --prefix "$INSTALL_DIRECTORY"

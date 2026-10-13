@@ -3,8 +3,9 @@
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 export SOURCE_DIRECTORY=/source INSTALL_DIRECTORY='/install with spaces'
-for major in 14 15 16 17 18; do
-    export VERSION="$major.0.0"
+for VERSION in $(sh "$root/scripts/postgresql-versions.sh" oldest); do
+    export VERSION
+    major=${VERSION%%.*}
     source "$root/scripts/macos-options.sh"
     test "$major_version" = "$major"
     test "${configure_options[1]}" = "$INSTALL_DIRECTORY"

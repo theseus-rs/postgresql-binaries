@@ -2,7 +2,7 @@
 
 set -eu
 
-printf '%s\n' "${1:-}" | grep -Eq '^(14|15|16|17|18)\.[0-9]+\.[0-9]+$'
+sh "$(dirname "$0")/postgresql-versions.sh" validate "${1:-}"
 
 postgresql_version=$(echo "$1" | awk -F. '{print ""$1"."$2}')
 version_num=$(printf '%s\n' "$1" | awk -F. '{printf "%d%04d", $1, $2}')
