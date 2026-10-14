@@ -33,5 +33,3 @@ Attestations establish the repository/workflow identity and subject digest; they
 do not prove a reproducible build or absence of vulnerabilities. Apt, apk and
 Homebrew package inputs remain repository-resolved rather than a fully frozen
 dependency snapshot. Review the recorded package versions and notice sources.
-Attestation publication cannot be exercised by a PR without a release; it remains
-a release-checklist gate, never a reason to publish a test release automatically.

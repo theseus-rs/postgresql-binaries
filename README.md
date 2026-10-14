@@ -4,7 +4,9 @@
 [![License](https://img.shields.io/github/license/theseus-rs/postgresql_binaries)](./LICENSE)
 [![Github All Releases](https://img.shields.io/github/downloads/theseus-rs/postgresql-binaries/total.svg)]()
 
-PostgreSQL binaries for Linux, MacOS and Windows; releases aligned with Rust [supported platforms](https://doc.rust-lang.org/nightly/rustc/platform-support.html).
+PostgreSQL binaries for Linux, macOS and Windows. Asset target names describe an ABI;
+check the [support policy](docs/support-policy.md) for tested environments, feature
+coverage, support tiers and known limitations. Musl archives are dynamically linked.
 
 ---
 

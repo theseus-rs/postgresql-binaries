@@ -1,3 +1,4 @@
+import datetime
 import importlib.util
 import json
 from pathlib import Path
@@ -51,6 +52,14 @@ class PostgreSQLVersionTests(unittest.TestCase):
                 self.assertEqual(len(entries), 1)
                 self.assertTrue(entries[0]["baseline_build"])
 
+    def test_eol_dates_cover_every_supported_major_and_packaging_revision(self):
+        for version in matrix.policy("current").splitlines():
+            with self.subTest(version=version):
+                eol = datetime.date.fromisoformat(matrix.policy("eol", version))
+                self.assertEqual(matrix.policy("eol", f"{version.split('.')[0]}.0.12"), eol.isoformat())
+        self.assertEqual(matrix.policy("eol", "14.24.0"), "2026-11-12")
+        self.assertEqual(matrix.policy("eol", "18.6.0"), "2030-11-14")
+
     def test_reject_invalid_versions_and_unsupported_targets(self):
         for version in ("13.23.0", "19.0.0", "16.0", "16.0.0-extra", "16.0.0\n18.6.0", "", "016.0.0"):
             with self.subTest(version=version), self.assertRaises(subprocess.CalledProcessError):
@@ -58,6 +67,9 @@ class PostgreSQLVersionTests(unittest.TestCase):
         for version, target in (("14.0.0", "aarch64-pc-windows-msvc"), ("18.6.0", "unknown")):
             with self.subTest(target=target), self.assertRaises(ValueError):
                 matrix.build_matrix(version, target)
+        for version in ("13.23.0", "18.6", "18.6.0-extra"):
+            with self.subTest(version=version), self.assertRaises(subprocess.CalledProcessError):
+                matrix.policy("eol", version)
 
     def test_jit_uses_llvm_compatible_with_oldest_sources(self):
         for major in (14, 15):
