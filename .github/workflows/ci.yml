@@ -30,12 +30,17 @@ jobs:
     name: Initialize
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+      - name: Select supported PostgreSQL versions
+        id: versions
+        run: echo "plan=$(python3 scripts/build-matrix.py)" >> "$GITHUB_OUTPUT"
       - name: Get PR head ref
         if: ${{ github.event_name == 'pull_request' }}
         id: pr_head_ref
         run: |
           echo "ref=refs/pull/${{ github.event.pull_request.number }}/head" >> $GITHUB_OUTPUT
     outputs:
+      versions: ${{ steps.versions.outputs.plan }}
       ref: >-
         ${{
           (github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/v'))
@@ -49,4 +54,43 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.initialize.outputs.ref }}
+      version: ${{ fromJSON(needs.initialize.outputs.versions).latest }}
       upload_artifacts: ${{ github.event_name == 'pull_request' }}
+
+  supported_versions:
+    name: PostgreSQL ${{ matrix.version }}
+    needs: [initialize, regression]
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.initialize.outputs.versions).previous }}
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.initialize.outputs.ref }}
+      version: ${{ matrix.version }}
+      upload_artifacts: ${{ github.event_name == 'pull_request' }}
+
+  compatibility:
+    name: Oldest PostgreSQL ${{ matrix.version }}
+    needs: [initialize, regression]
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.initialize.outputs.versions).oldest }}
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.initialize.outputs.ref }}
+      version: ${{ matrix.version }}
+      target: i586-unknown-linux-musl
+      upload_artifacts: ${{ github.event_name == 'pull_request' }}
+
+  supported_versions_result:
+    name: All supported PostgreSQL versions
+    if: ${{ always() }}
+    needs: [initialize, regression, build, supported_versions, compatibility]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every version and compatibility build to pass
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: jq -e 'all(. == "success")' <<< "$RESULTS"

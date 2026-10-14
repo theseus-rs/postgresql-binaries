@@ -1,7 +1,6 @@
 import importlib.util
 import json
 from pathlib import Path
-import re
 import shutil
 import struct
 import tempfile
@@ -77,21 +76,10 @@ class TargetTests(unittest.TestCase):
     def test_workflow_inventories_match(self):
         for target in targets:
             self.assertEqual(target["id"], target["target"])
-        expected = sorted(t["target"] for t in targets if t["enabled"])
         for workflow in ("build.yml", "verify-public.yml"):
-            actual = re.findall(r'^            target: (\S+)$', (root / ".github/workflows" / workflow).read_text(), re.M)
-            self.assertEqual(sorted(actual), expected)
-            self.assertEqual(len(actual), len(set(actual)))
             content = (root / ".github/workflows" / workflow).read_text()
-            for target in (t for t in targets if t["enabled"]):
-                start = content.index("          - id: " + target["id"] + "\n")
-                end = content.index("\n\n", start)
-                for field in ("os", "platform", "cflags", "qemu_cpu", "baseline_build"):
-                    if field in target:
-                        value = target[field]
-                        if isinstance(value, bool):
-                            value = str(value).lower()
-                        self.assertIn(f'{field}: {value}', content[start:end])
+            self.assertIn("python3 scripts/build-matrix.py", content)
+            self.assertIn("matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}", content)
 
     def test_reject_big_endian_mips_and_n32(self):
         target = next(t for t in targets if t["id"] == "mips64el-unknown-linux-gnuabi64")

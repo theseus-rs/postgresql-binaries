@@ -50,6 +50,8 @@ RUN apk add --no-cache \
       zstd-dev
 
 COPY scripts/fetch-source.sh /usr/local/bin/fetch-source
+COPY scripts/postgresql-versions.sh /usr/local/bin/postgresql-versions.sh
+COPY scripts/patches /usr/local/bin/patches
 RUN update-ca-certificates && \
     fetch-source "$POSTGRESQL_VERSION" /usr/src/postgresql
 

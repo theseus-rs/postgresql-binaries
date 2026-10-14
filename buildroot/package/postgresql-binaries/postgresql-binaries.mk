@@ -43,7 +43,9 @@ else
 POSTGRESQL_BINARIES_INSTALL_TARGET_OPTS = DESTDIR=$(TARGET_DIR) install
 endif
 
-ifneq ($(filter 16 17 18,$(PG_MAJOR_VERSION)),)
+# Supported majors are validated by postgresql-versions.sh. These are feature
+# thresholds, so newly supported majors inherit the current feature set.
+ifeq ($(filter 14 15,$(PG_MAJOR_VERSION)),)
 POSTGRESQL_BINARIES_CONF_OPTS += --with-zstd
 ifeq ($(BR2_PACKAGE_LLVM),y)
 POSTGRESQL_BINARIES_DEPENDENCIES += llvm host-clang

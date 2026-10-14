@@ -6,6 +6,14 @@ on:
       ref:
         type: string
         default: ${{ github.ref }}
+      version:
+        description: PostgreSQL packaging version to build
+        type: string
+        required: true
+      target:
+        description: Optional target triple; empty builds every supported target
+        type: string
+        default: ''
       release:
         description: if this is a release build
         type: boolean
@@ -16,204 +24,31 @@ on:
         default: false
 
 jobs:
+  matrix:
+    name: Select targets
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.select.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+      - id: select
+        env:
+          VERSION: ${{ inputs.version }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          arguments=(--version "$VERSION")
+          if [ -n "$TARGET" ]; then arguments+=(--target "$TARGET"); fi
+          echo "targets=$(python3 scripts/build-matrix.py "${arguments[@]}")" >> "$GITHUB_OUTPUT"
+
   build:
     name: ${{ matrix.id }}
+    needs: matrix
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - id: aarch64-unknown-linux-gnu
-            target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/arm64/v8
-            architecture: AArch64
-            cflags: -O2 -march=armv8-a
-            qemu_cpu: cortex-a53
-
-          - id: aarch64-unknown-linux-musl
-            target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/arm64/v8
-            architecture: AArch64
-            cflags: -O2 -march=armv8-a
-            qemu_cpu: cortex-a53
-
-          - id: arm-unknown-linux-gnueabi
-            target: arm-unknown-linux-gnueabi
-            os: ubuntu-latest
-            platform: linux/arm/v5
-            architecture: ARM
-            cflags: -O2 -march=armv6 -mfloat-abi=soft
-            qemu_cpu: arm1176
-
-          - id: arm-unknown-linux-musleabihf
-            target: arm-unknown-linux-musleabihf
-            os: ubuntu-latest
-            platform: linux/arm/v6
-            architecture: ARM
-            cflags: -O2 -march=armv6 -mfloat-abi=hard -mfpu=vfp
-            qemu_cpu: arm1176
-
-          - id: armv5te-unknown-linux-gnueabi
-            target: armv5te-unknown-linux-gnueabi
-            os: ubuntu-latest
-            platform: linux/arm/v5
-            architecture: ARM
-            cflags: -O2 -march=armv5te -mfloat-abi=soft
-            qemu_cpu: arm926
-
-          - id: armv7-unknown-linux-gnueabihf
-            target: armv7-unknown-linux-gnueabihf
-            os: ubuntu-latest
-            platform: linux/arm/v7
-            architecture: ARM
-            cflags: -O2 -march=armv7-a -mfloat-abi=hard -mfpu=vfp
-            qemu_cpu: cortex-a7
-
-          - id: armv7-unknown-linux-musleabihf
-            target: armv7-unknown-linux-musleabihf
-            os: ubuntu-latest
-            platform: linux/arm/v7
-            architecture: ARM
-            cflags: -O2 -march=armv7-a -mfloat-abi=hard -mfpu=vfp
-            qemu_cpu: cortex-a7
-
-          - id: x86_64-unknown-linux-gnu
-            target: x86_64-unknown-linux-gnu
-            os: ubuntu-24.04-arm
-            platform: linux/amd64
-            architecture: Advanced Micro Devices X86-64
-            cflags: -O2 -march=x86-64
-            qemu_cpu: qemu64,-sse3,-cx16,-lahf-lm
-
-          - id: x86_64-unknown-linux-musl
-            target: x86_64-unknown-linux-musl
-            os: ubuntu-24.04-arm
-            platform: linux/amd64
-            architecture: Advanced Micro Devices X86-64
-            cflags: -O2 -march=x86-64
-            qemu_cpu: qemu64,-sse3,-cx16,-lahf-lm
-
-          - id: i686-unknown-linux-gnu
-            target: i686-unknown-linux-gnu
-            os: ubuntu-24.04-arm
-            platform: linux/386
-            architecture: Intel 80386
-            cflags: -O2 -march=i686 -msse2 -mfpmath=sse
-            qemu_cpu: qemu32,-sse3
-
-          - id: i686-unknown-linux-musl
-            target: i686-unknown-linux-musl
-            os: ubuntu-24.04-arm
-            platform: linux/386
-            architecture: Intel 80386
-            cflags: -O2 -march=i686 -msse2 -mfpmath=sse
-            qemu_cpu: qemu32,-sse3
-
-          - id: arm-unknown-linux-musleabi
-            target: arm-unknown-linux-musleabi
-            os: ubuntu-latest
-            platform: linux/arm/v6
-            architecture: ARM
-            cflags: -O2 -march=armv6 -mfloat-abi=soft
-            qemu_cpu: arm1176,vfp=off
-            baseline_build: true
-
-          - id: arm-unknown-linux-gnueabihf
-            target: arm-unknown-linux-gnueabihf
-            os: ubuntu-latest
-            platform: linux/arm/v6
-            architecture: ARM
-            cflags: -O2 -march=armv6 -mfloat-abi=hard -mfpu=vfp
-            qemu_cpu: arm1176
-            baseline_build: true
-
-          - id: i586-unknown-linux-gnu
-            target: i586-unknown-linux-gnu
-            os: ubuntu-24.04-arm
-            platform: linux/386
-            architecture: Intel 80386
-            cflags: -O2 -march=i586 -mno-sse -mno-sse2 -mfpmath=387
-            qemu_cpu: pentium
-            baseline_build: true
-
-          - id: i586-unknown-linux-musl
-            target: i586-unknown-linux-musl
-            os: ubuntu-24.04-arm
-            platform: linux/386
-            architecture: Intel 80386
-            cflags: -O2 -march=i586 -mno-sse -mno-sse2 -mfpmath=387
-            qemu_cpu: pentium
-            baseline_build: true
-
-          - id: mips64el-unknown-linux-gnuabi64
-            target: mips64el-unknown-linux-gnuabi64
-            os: ubuntu-latest
-            platform: linux/mips64le
-            architecture: MIPS R3000
-            cflags: -O2 -march=mips64r2
-            qemu_cpu: MIPS64R2-generic
-
-          - id: powerpc64le-unknown-linux-gnu
-            target: powerpc64le-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/ppc64le
-            architecture: PowerPC64
-            cflags: -O2 -mcpu=power8
-            qemu_cpu: power8
-
-          - id: powerpc64le-unknown-linux-musl
-            target: powerpc64le-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/ppc64le
-            architecture: PowerPC64
-            cflags: -O2 -mcpu=power8
-            qemu_cpu: power8
-
-          - id: s390x-unknown-linux-gnu
-            target: s390x-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/s390x
-            architecture: IBM S/390
-            cflags: -O2 -march=z196
-            qemu_cpu: z196-base,msa=off,dateh2=off,cmpsceh=off,pfpo=off,dfphp=off,dfp=off,emon=off,parseh=off,hfpue=off,hfpm=off,nonqks=off,csske=off,asnlxr=off,tods=off
-
-          - id: s390x-unknown-linux-musl
-            target: s390x-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/s390x
-            architecture: IBM S/390
-            cflags: -O2 -march=z196
-            qemu_cpu: z196-base,msa=off,dateh2=off,cmpsceh=off,pfpo=off,dfphp=off,dfp=off,emon=off,parseh=off,hfpue=off,hfpm=off,nonqks=off,csske=off,asnlxr=off,tods=off
-
-          - id: aarch64-apple-darwin
-            target: aarch64-apple-darwin
-            os: macos-15
-            architecture: arm64
-
-          - id: x86_64-apple-darwin
-            target: x86_64-apple-darwin
-            os: macos-15-intel
-            architecture: x86_64
-
-          - id: x86_64-pc-windows-msvc
-            target: x86_64-pc-windows-msvc
-            os: windows-latest
-            architecture: x86-64
-            msvc_arch: x64
-            pe_machine: "0x8664"
-            python_architecture: x64
-            vcpkg_triplet: x64-windows
-
-          - id: aarch64-pc-windows-msvc
-            target: aarch64-pc-windows-msvc
-            os: windows-11-arm
-            architecture: AArch64
-            msvc_arch: arm64
-            pe_machine: "0xaa64"
-            python_architecture: arm64
-            vcpkg_triplet: arm64-windows
+      matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}
 
     defaults:
       run:
@@ -226,41 +61,22 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: Setup environment
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          version=$(echo "${{ github.ref_name }}" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$') || true
-
-          if [ -z "$version" ]; then
-            # Set default version for non-release builds
-            version="18.6.0"
-          fi
-
+          sh scripts/postgresql-versions.sh validate "$VERSION"
           root_directory="$(pwd)"
-          postgresql_version=$(echo "$version" | awk -F. '{print ""$1"."$2}')
-          postgresql_major_version=$(echo "$version" | awk -F. '{print ""$1}')
-          archive="postgresql-$version-${{ matrix.target }}"
+          archive="postgresql-$VERSION-${{ matrix.target }}"
           install_directory="$root_directory/$archive"
 
           echo "ARCHIVE=$archive" | tee -a $GITHUB_ENV
-          echo "BUILD_SUPPORTED=true" | tee -a $GITHUB_ENV
+          # The artifact-link workflow runs from main, including before this PR
+          # merges. Keep its existing name filter compatible with versioned names.
+          echo "ARTIFACT_NAME=postgresql-${VERSION//./_}-${{ matrix.id }}" >> "$GITHUB_ENV"
           echo "INSTALL_DIRECTORY=$install_directory" | tee -a $GITHUB_ENV
           echo "PLATFORM=${{ matrix.platform }}" | tee -a $GITHUB_ENV
-          echo "POSTGRESQL_MAJOR_VERSION=$postgresql_major_version" | tee -a $GITHUB_ENV
-          echo "POSTGRESQL_VERSION=$postgresql_version" | tee -a $GITHUB_ENV
           echo "ROOT_DIRECTORY=$root_directory" | tee -a $GITHUB_ENV
-          echo "VERSION=$version" | tee -a $GITHUB_ENV
-
-      - name: Check build support
-        id: build_support
-        run: |
-          supported=true
-
-          if [[ "${{ matrix.target }}" == "aarch64-pc-windows-msvc" && "$POSTGRESQL_MAJOR_VERSION" -lt 16 ]]; then
-            echo "::notice::Windows ARM64 source builds require PostgreSQL 16 or newer; skipping PostgreSQL $POSTGRESQL_VERSION."
-            supported=false
-          fi
-
-          echo "supported=$supported" | tee -a "$GITHUB_OUTPUT"
-          echo "BUILD_SUPPORTED=$supported" | tee -a "$GITHUB_ENV"
+          echo "VERSION=$VERSION" | tee -a $GITHUB_ENV
 
       #
       # Linux Build
@@ -310,20 +126,20 @@ jobs:
       #
 
       - name: Setup Python (Windows)
-        if: ${{ contains(matrix.target, '-windows-') && steps.build_support.outputs.supported == 'true' }}
+        if: ${{ contains(matrix.target, '-windows-') }}
         uses: actions/setup-python@v6
         with:
           python-version: "3.x"
           architecture: ${{ matrix.python_architecture }}
 
       - name: Configure MSVC (Windows)
-        if: ${{ contains(matrix.target, '-windows-') && steps.build_support.outputs.supported == 'true' }}
+        if: ${{ contains(matrix.target, '-windows-') }}
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.msvc_arch }}
 
       - name: Build (Windows)
-        if: ${{ contains(matrix.target, '-windows-') && steps.build_support.outputs.supported == 'true' }}
+        if: ${{ contains(matrix.target, '-windows-') }}
         run: ./scripts/build-windows.sh "$VERSION" "${{ matrix.target }}" "${{ matrix.vcpkg_triplet }}"
 
       #
@@ -336,7 +152,6 @@ jobs:
           jq -e '(.missing_notices // []) | length == 0' "$INSTALL_DIRECTORY/runtime-dependencies.json"
 
       - name: Validate binary target compatibility
-        if: ${{ steps.build_support.outputs.supported == 'true' }}
         env:
           TARGET: ${{ matrix.target }}
         run: |
@@ -344,7 +159,6 @@ jobs:
           "$python_command" scripts/verify-target.py "$INSTALL_DIRECTORY" "$TARGET"
 
       - name: Prepare archive
-        if: ${{ steps.build_support.outputs.supported == 'true' }}
         run: |
           cp $ROOT_DIRECTORY/{README.md,LICENSE} "$INSTALL_DIRECTORY"
           ls -l "$INSTALL_DIRECTORY/"
@@ -352,7 +166,7 @@ jobs:
       # The .tar.gz archive is the primary archive for all platforms.  This archive
       # provides a consistent experience for programmatic cases (e.g. embedded).
       - name: Build archive (Linux, MacOS)
-        if: ${{ steps.build_support.outputs.supported == 'true' && !contains(matrix.target, '-windows-') }}
+        if: ${{ !contains(matrix.target, '-windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           ./scripts/checksum.sh "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
@@ -360,7 +174,7 @@ jobs:
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" | tee -a $GITHUB_ENV
 
       - name: Build archive (Windows)
-        if: ${{ steps.build_support.outputs.supported == 'true' && contains(matrix.target, '-windows-') }}
+        if: ${{ contains(matrix.target, '-windows-') }}
         run: |
           tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
           ./scripts/checksum.sh "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
@@ -369,7 +183,7 @@ jobs:
 
       # The zip archive for Windows is created as a convenience to users for manual installations.
       - name: Build .zip archive (Windows)
-        if: ${{ steps.build_support.outputs.supported == 'true' && contains(matrix.target, '-windows-') }}
+        if: ${{ contains(matrix.target, '-windows-') }}
         run: |
           7z a "$ARCHIVE.zip" "$ARCHIVE"
           ./scripts/checksum.sh "$ARCHIVE.zip" > "$ARCHIVE.zip.sha256"
@@ -381,7 +195,6 @@ jobs:
       #
 
       - name: Test build / archive
-        if: ${{ steps.build_support.outputs.supported == 'true' }}
         env:
           TARGET: ${{ matrix.target }}
           PLATFORM: ${{ matrix.platform }}
@@ -413,7 +226,7 @@ jobs:
           ./scripts/test-archive.sh "$ASSET" "$VERSION"
 
       - name: Stage archive artifacts
-        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.upload_artifacts == true }}
+        if: ${{ inputs.upload_artifacts == true }}
         run: |
           mkdir -p artifacts
           cp "$ASSET" "$ASSET_SUM" artifacts/
@@ -424,10 +237,10 @@ jobs:
 
       - name: Upload archive artifacts
         id: archive_artifacts
-        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.upload_artifacts == true }}
+        if: ${{ inputs.upload_artifacts == true }}
         uses: actions/upload-artifact@v7
         with:
-          name: postgresql-${{ matrix.id }}
+          name: ${{ env.ARTIFACT_NAME }}
           path: artifacts/*
           if-no-files-found: error
           retention-days: 14
@@ -437,7 +250,7 @@ jobs:
         env:
           ARTIFACT_URL: ${{ steps.archive_artifacts.outputs.artifact-url }}
         run: |
-          echo "### PostgreSQL archives (${{ matrix.target }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "### PostgreSQL $VERSION archives (${{ matrix.target }})" >> "$GITHUB_STEP_SUMMARY"
           echo "[Download archives and SHA-256 checksums]($ARTIFACT_URL) (retained for 14 days)." >> "$GITHUB_STEP_SUMMARY"
 
       #
@@ -445,7 +258,7 @@ jobs:
       #
 
       - name: Upload release archive
-        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.release == true }}
+        if: ${{ inputs.release == true }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -456,7 +269,7 @@ jobs:
           ./scripts/verify-checksum.sh "draft-check/$ASSET" "$ASSET.tested.sha256"
 
       - name: Upload release archive (Windows)
-        if: ${{ steps.build_support.outputs.supported == 'true' && inputs.release == true && contains(matrix.target, '-windows-') }}
+        if: ${{ inputs.release == true && contains(matrix.target, '-windows-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

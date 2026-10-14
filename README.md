@@ -27,7 +27,7 @@ of PostgreSQL are released or new builds of existing versions are required for b
 The build workflow calls the same per-OS Bash scripts that can be run locally. Pass the full project
 version (`<postgres major>.<postgres minor>.<release>`) and target triple. Linux also requires a Docker
 platform, and Windows requires a vcpkg triplet; matching values are listed in
-[the build matrix](.github/workflows/build.yml).
+[the target inventory](targets.json).
 
 Run these examples from the repository root:
 
@@ -70,6 +70,7 @@ Linux installations can be tested in the build image:
 docker run --rm --platform linux/amd64 \
   --volume "$PWD/postgresql-18.6.0-x86_64-unknown-linux-gnu:/opt/test" \
   --volume "$PWD/scripts/test.sh:/opt/test/test.sh:ro" \
+  --volume "$PWD/scripts/postgresql-versions.sh:/opt/test/postgresql-versions.sh:ro" \
   postgresql-build:latest /bin/sh -c 'cd /opt/test && ./test.sh 18.6.0'
 ```
 

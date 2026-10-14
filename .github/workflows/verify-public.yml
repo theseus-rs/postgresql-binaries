@@ -11,202 +11,30 @@ on:
       version:
         description: Published packaging version to verify
         required: true
-        default: 18.6.0
 
 permissions:
   contents: read
 
 jobs:
+  matrix:
+    name: Select targets
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.select.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: select
+        env:
+          VERSION: ${{ inputs.version }}
+        run: echo "targets=$(python3 scripts/build-matrix.py --version "$VERSION")" >> "$GITHUB_OUTPUT"
+
   verify:
     name: ${{ matrix.id }}
+    needs: matrix
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - id: aarch64-unknown-linux-gnu
-            target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/arm64/v8
-            architecture: AArch64
-            cflags: -O2 -march=armv8-a
-            qemu_cpu: cortex-a53
-
-          - id: aarch64-unknown-linux-musl
-            target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/arm64/v8
-            architecture: AArch64
-            cflags: -O2 -march=armv8-a
-            qemu_cpu: cortex-a53
-
-          - id: arm-unknown-linux-gnueabi
-            target: arm-unknown-linux-gnueabi
-            os: ubuntu-latest
-            platform: linux/arm/v5
-            architecture: ARM
-            cflags: -O2 -march=armv6 -mfloat-abi=soft
-            qemu_cpu: arm1176
-
-          - id: arm-unknown-linux-musleabihf
-            target: arm-unknown-linux-musleabihf
-            os: ubuntu-latest
-            platform: linux/arm/v6
-            architecture: ARM
-            cflags: -O2 -march=armv6 -mfloat-abi=hard -mfpu=vfp
-            qemu_cpu: arm1176
-
-          - id: armv5te-unknown-linux-gnueabi
-            target: armv5te-unknown-linux-gnueabi
-            os: ubuntu-latest
-            platform: linux/arm/v5
-            architecture: ARM
-            cflags: -O2 -march=armv5te -mfloat-abi=soft
-            qemu_cpu: arm926
-
-          - id: armv7-unknown-linux-gnueabihf
-            target: armv7-unknown-linux-gnueabihf
-            os: ubuntu-latest
-            platform: linux/arm/v7
-            architecture: ARM
-            cflags: -O2 -march=armv7-a -mfloat-abi=hard -mfpu=vfp
-            qemu_cpu: cortex-a7
-
-          - id: armv7-unknown-linux-musleabihf
-            target: armv7-unknown-linux-musleabihf
-            os: ubuntu-latest
-            platform: linux/arm/v7
-            architecture: ARM
-            cflags: -O2 -march=armv7-a -mfloat-abi=hard -mfpu=vfp
-            qemu_cpu: cortex-a7
-
-          - id: x86_64-unknown-linux-gnu
-            target: x86_64-unknown-linux-gnu
-            os: ubuntu-24.04-arm
-            platform: linux/amd64
-            architecture: Advanced Micro Devices X86-64
-            cflags: -O2 -march=x86-64
-            qemu_cpu: qemu64,-sse3,-cx16,-lahf-lm
-
-          - id: x86_64-unknown-linux-musl
-            target: x86_64-unknown-linux-musl
-            os: ubuntu-24.04-arm
-            platform: linux/amd64
-            architecture: Advanced Micro Devices X86-64
-            cflags: -O2 -march=x86-64
-            qemu_cpu: qemu64,-sse3,-cx16,-lahf-lm
-
-          - id: i686-unknown-linux-gnu
-            target: i686-unknown-linux-gnu
-            os: ubuntu-24.04-arm
-            platform: linux/386
-            architecture: Intel 80386
-            cflags: -O2 -march=i686 -msse2 -mfpmath=sse
-            qemu_cpu: qemu32,-sse3
-
-          - id: i686-unknown-linux-musl
-            target: i686-unknown-linux-musl
-            os: ubuntu-24.04-arm
-            platform: linux/386
-            architecture: Intel 80386
-            cflags: -O2 -march=i686 -msse2 -mfpmath=sse
-            qemu_cpu: qemu32,-sse3
-
-          - id: arm-unknown-linux-musleabi
-            target: arm-unknown-linux-musleabi
-            os: ubuntu-latest
-            platform: linux/arm/v6
-            architecture: ARM
-            cflags: -O2 -march=armv6 -mfloat-abi=soft
-            qemu_cpu: arm1176,vfp=off
-            baseline_build: true
-
-          - id: arm-unknown-linux-gnueabihf
-            target: arm-unknown-linux-gnueabihf
-            os: ubuntu-latest
-            platform: linux/arm/v6
-            architecture: ARM
-            cflags: -O2 -march=armv6 -mfloat-abi=hard -mfpu=vfp
-            qemu_cpu: arm1176
-            baseline_build: true
-
-          - id: i586-unknown-linux-gnu
-            target: i586-unknown-linux-gnu
-            os: ubuntu-24.04-arm
-            platform: linux/386
-            architecture: Intel 80386
-            cflags: -O2 -march=i586 -mno-sse -mno-sse2 -mfpmath=387
-            qemu_cpu: pentium
-            baseline_build: true
-
-          - id: i586-unknown-linux-musl
-            target: i586-unknown-linux-musl
-            os: ubuntu-24.04-arm
-            platform: linux/386
-            architecture: Intel 80386
-            cflags: -O2 -march=i586 -mno-sse -mno-sse2 -mfpmath=387
-            qemu_cpu: pentium
-            baseline_build: true
-
-          - id: mips64el-unknown-linux-gnuabi64
-            target: mips64el-unknown-linux-gnuabi64
-            os: ubuntu-latest
-            platform: linux/mips64le
-            architecture: MIPS R3000
-            cflags: -O2 -march=mips64r2
-            qemu_cpu: MIPS64R2-generic
-
-          - id: powerpc64le-unknown-linux-gnu
-            target: powerpc64le-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/ppc64le
-            architecture: PowerPC64
-            cflags: -O2 -mcpu=power8
-            qemu_cpu: power8
-
-          - id: powerpc64le-unknown-linux-musl
-            target: powerpc64le-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/ppc64le
-            architecture: PowerPC64
-            cflags: -O2 -mcpu=power8
-            qemu_cpu: power8
-
-          - id: s390x-unknown-linux-gnu
-            target: s390x-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux/s390x
-            architecture: IBM S/390
-            cflags: -O2 -march=z196
-            qemu_cpu: z196-base,msa=off,dateh2=off,cmpsceh=off,pfpo=off,dfphp=off,dfp=off,emon=off,parseh=off,hfpue=off,hfpm=off,nonqks=off,csske=off,asnlxr=off,tods=off
-
-          - id: s390x-unknown-linux-musl
-            target: s390x-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux/s390x
-            architecture: IBM S/390
-            cflags: -O2 -march=z196
-            qemu_cpu: z196-base,msa=off,dateh2=off,cmpsceh=off,pfpo=off,dfphp=off,dfp=off,emon=off,parseh=off,hfpue=off,hfpm=off,nonqks=off,csske=off,asnlxr=off,tods=off
-
-          - id: aarch64-apple-darwin
-            target: aarch64-apple-darwin
-            os: macos-15
-            architecture: arm64
-
-          - id: x86_64-apple-darwin
-            target: x86_64-apple-darwin
-            os: macos-15-intel
-            architecture: x86_64
-
-          - id: x86_64-pc-windows-msvc
-            target: x86_64-pc-windows-msvc
-            os: windows-latest
-            architecture: x86-64
-
-          - id: aarch64-pc-windows-msvc
-            target: aarch64-pc-windows-msvc
-            os: windows-11-arm
-            architecture: AArch64
+      matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}
 
     defaults:
       run:
@@ -244,10 +72,6 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           QEMU_CPU: ${{ matrix.qemu_cpu }}
         run: |
-          if [[ "$TARGET" == aarch64-pc-windows-msvc && "${VERSION%%.*}" -lt 16 ]]; then
-            echo "Windows ARM64 archives require PostgreSQL 16 or newer; skipping $VERSION."
-            exit 0
-          fi
           if [[ "$TARGET" == *linux* ]]; then
             if [ -n "${RUNTIME_IMAGE:-}" ]; then
               : # Source-built targets provide their matching minimal runtime.
