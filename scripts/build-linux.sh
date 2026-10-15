@@ -13,6 +13,7 @@ ROOT_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_DIRECTORY="${INSTALL_DIRECTORY:-$ROOT_DIRECTORY/postgresql-$VERSION-$TARGET}"
 
 cd "$ROOT_DIRECTORY"
+export BUILD_REVISION="${BUILD_REVISION:-$(git rev-parse HEAD)}"
 
 PLATFORM="$3"
 
@@ -34,6 +35,7 @@ fi
 
 docker buildx build --file "$DOCKERFILE" --load \
   --build-arg "POSTGRESQL_VERSION=$VERSION" --build-arg "TARGET_CFLAGS=${TARGET_CFLAGS:--O2}" --platform "$PLATFORM" \
+  --build-arg "TARGET=$TARGET" --build-arg "BUILD_REVISION=$BUILD_REVISION" \
   --tag postgresql-build:latest .
 
 container_id="$(docker create --platform "$PLATFORM" postgresql-build:latest)"

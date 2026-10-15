@@ -113,4 +113,17 @@ if [ "$mode" = build ]; then
     RUNTIME_SYSROOT="$output/target" "$root/scripts/bundle-runtime.sh" "$install_directory"
     python3 "$root/scripts/collect-buildroot-notices.py" "$output" "$install_directory"
     cp "$output/.config" "$install_directory/buildroot.config"
+    # Query the target executable under its matching runtime and CPU emulation.
+    export PG_CONFIG_COMMAND
+    PG_CONFIG_COMMAND=$(python3 - "$platform" "$install_directory" "$runtime_image" <<'PYTHON'
+import json, sys
+print(json.dumps(["docker", "run", "--rm", "--platform", sys.argv[1],
+                  "--mount", f"type=bind,src={sys.argv[2]},dst=/opt/postgresql,readonly",
+                  "--entrypoint", "/opt/postgresql/bin/pg_config", sys.argv[3]]))
+PYTHON
+    )
+    compiler=$(find "$output/host/bin" -name '*-gcc' -print -quit)
+    test -n "$compiler"
+    BUILD_REVISION="${BUILD_REVISION:-$(git -C "$root" rev-parse HEAD)}" CC="$compiler" \
+        python3 "$root/scripts/build-metadata.py" "$install_directory" "$version" "$target"
 fi

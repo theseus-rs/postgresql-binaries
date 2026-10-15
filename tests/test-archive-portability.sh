@@ -47,7 +47,7 @@ for customization in symlink file; do
     cmp "$source_stdlib/os.py" "$destination/os.py"
     cmp "$source_stdlib/encodings/__init__.py" "$destination/encodings/__init__.py"
     test "$(readlink "$destination/encodings/internal.py")" = ../os.py
-    tar -C "$temporary/$customization" -czf "$temporary/$customization.tar.gz" "$archive"
+    COPYFILE_DISABLE=1 tar -C "$temporary/$customization" -czf "$temporary/$customization.tar.gz" "$archive"
     python3 "$root/scripts/verify-archive.py" "$temporary/$customization.tar.gz" "$archive"
 done
 

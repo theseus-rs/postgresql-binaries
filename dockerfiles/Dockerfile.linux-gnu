@@ -1,7 +1,9 @@
 # debian:12.4 (multi-platform index)
-FROM debian:12.4
+FROM debian:12.4@sha256:79becb70a6247d277b59c09ca340bbe0349af6aacb5afa90ec349528b53ce2c9
 
 ARG POSTGRESQL_VERSION
+ARG TARGET
+ARG BUILD_REVISION
 ARG TARGET_CFLAGS="-O2"
 ENV CFLAGS="$TARGET_CFLAGS"
 ENV CXXFLAGS="$TARGET_CFLAGS"
@@ -83,11 +85,14 @@ COPY scripts/install-patchelf.sh /usr/local/bin/
 RUN if [ "$(dpkg --print-architecture)" = mips64el ]; then \
         bash /usr/local/bin/install-patchelf.sh; \
     fi
-COPY scripts/bundle-runtime.sh scripts/collect-notices.sh /usr/local/bin/
+COPY scripts/bundle-runtime.sh scripts/collect-notices.sh scripts/collect-notices.py scripts/alpine-notices.py /usr/local/bin/
 RUN bash /usr/local/bin/bundle-runtime.sh /opt/postgresql && \
     bash /usr/local/bin/collect-notices.sh /opt/postgresql
 
 RUN cp /usr/src/postgresql/COPYRIGHT /usr/src/postgresql/source-input.json /opt/postgresql
+
+COPY scripts/build-metadata.py /usr/local/bin/
+RUN BUILD_REVISION="$BUILD_REVISION" python3 /usr/local/bin/build-metadata.py /opt/postgresql "$POSTGRESQL_VERSION" "$TARGET"
 
 # Create user and group for running tests
 RUN groupadd --system --gid 1000 postgresql && \
