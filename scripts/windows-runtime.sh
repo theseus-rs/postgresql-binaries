@@ -2,6 +2,7 @@
 
 set -eo pipefail
 script_directory=$(cd "$(dirname "$0")" && pwd)
+source "$script_directory/build-diagnostics.sh"
 source "$script_directory/runtime-common.sh"
 
 windows_readobj() {
@@ -76,6 +77,7 @@ windows_audit() {
 
 windows_bundle() {
     local root=$1 provider=${2:-edb} prefix expected version destination path directory
+    build_phase 'Detect Windows Python runtime and ABI'
     local input_source='EDB input archive'
     prefix=${WINDOWS_PYTHON_ROOT:-${pythonLocation:-}}
     [ -n "$prefix" ] || runtime_die 'Set WINDOWS_PYTHON_ROOT or use actions/setup-python'
@@ -93,11 +95,13 @@ windows_bundle() {
     if [ "$provider" = source ]; then input_source='PostgreSQL source build and vcpkg'; fi
     [ -f "$prefix/python${expected//./}.dll" ] || runtime_die 'Missing matching Python runtime DLL'
     destination="$root/bin"
+    build_phase 'Copy Python standard library and DLLs'
     runtime_copy_stdlib "$prefix/Lib" "$destination/Lib"
     mkdir -p "$destination/DLLs"
     cp -pR "$prefix/DLLs/." "$destination/DLLs/"
     : > "$temporary/bundled"
     : > "$temporary/audited"
+    build_phase 'Record bundled DLL checksums'
     find "$root" -type f -iname '*.dll' ! -iname '*plperl*' ! -iname '*pltcl*' -print0 > "$temporary/dlls"
     while IFS= read -r -d '' path; do
         jq -cn --arg file "${path#"$root/"}" --arg source "$input_source" --arg digest "$(runtime_sha256 "$path")" \
@@ -111,6 +115,7 @@ windows_bundle() {
             '{file: $file, source: $source, input_sha256: $digest, package: "CPython", package_version: $version}' >> "$temporary/bundled"
     done
     mkdir -p "$root/dependency-notices/python"
+    build_phase 'Collect runtime redistribution notices'
     cp -p "$prefix/LICENSE.txt" "$root/dependency-notices/python/LICENSE.txt"
     for directory in "$root/lib" "$root/lib/postgresql" "$root/share/extension" "$root/share/postgresql/extension"; do
         [ -d "$directory" ] || continue
@@ -134,7 +139,9 @@ windows_bundle() {
             [ -f "$root/$path" ] || runtime_die "Missing EDB redistribution notice: $path"
         done
     fi
+    build_phase 'Audit Windows DLL imports'
     windows_audit "$root" "$temporary/audited"
+    build_phase 'Write Windows runtime manifest'
     jq -n --slurpfile bundled "$temporary/bundled" --slurpfile audited "$temporary/audited" \
         --arg version "$version" --arg abi "$expected" '{bundled: $bundled, audited_files: $audited,
             system: ["Windows", "Microsoft Visual C++ runtime (vcruntime140 family)"],

@@ -10,6 +10,7 @@ fi
 VERSION="$1"
 TARGET="$2"
 ROOT_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIRECTORY/scripts/build-diagnostics.sh"
 POSTGRESQL_VERSION="${VERSION%.*}"
 POSTGRESQL_MAJOR_VERSION="${VERSION%%.*}"
 INSTALL_DIRECTORY="${INSTALL_DIRECTORY:-$ROOT_DIRECTORY/postgresql-$VERSION-$TARGET}"
@@ -31,6 +32,7 @@ fi
 runner_temp="$(cygpath -u "${RUNNER_TEMP:-${TMPDIR:-/tmp}}")"
 SOURCE_DIRECTORY="$runner_temp/postgresql-$POSTGRESQL_VERSION"
 
+build_phase "Fetch and patch PostgreSQL $POSTGRESQL_VERSION"
 "$ROOT_DIRECTORY/scripts/fetch-source.sh" "$VERSION" "$SOURCE_DIRECTORY"
 python "$ROOT_DIRECTORY/scripts/patch-postgresql-libxml2.py" "$SOURCE_DIRECTORY"
 
@@ -38,17 +40,18 @@ if [[ "$TARGET" == "aarch64-pc-windows-msvc" ]]; then
   python "$ROOT_DIRECTORY/scripts/patch-postgresql-windows-arm64.py" "$SOURCE_DIRECTORY"
 fi
 
+build_phase 'Install build tools'
 python -m pip install --upgrade pip
 python -m pip install meson ninja
-choco install winflexbison3 --yes --no-progress
+bash "$ROOT_DIRECTORY/scripts/install-winflexbison.sh" "$runner_temp/winflexbison"
 
-export PATH="/c/ProgramData/chocolatey/bin:$PATH"
+export PATH="$runner_temp/winflexbison:$PATH"
 hash -r
 win_flex --version
 win_bison --version
 
 if [ "$POSTGRESQL_MAJOR_VERSION" -lt 16 ]; then
-  # The legacy MSVC generators invoke bison/flex, but winflexbison3 installs
+  # The legacy MSVC generators invoke bison/flex, but WinFlexBison provides
   # win_bison/win_flex. Git checkouts require these generators to run.
   python "$ROOT_DIRECTORY/scripts/patch-postgresql-windows-generators.py" "$SOURCE_DIRECTORY"
 fi
@@ -77,6 +80,7 @@ if [ "$POSTGRESQL_MAJOR_VERSION" -lt 16 ]; then
   openssl_package="openssl[tools]"
 fi
 
+build_phase 'Build vcpkg dependencies'
 "$vcpkg_exe" install \
   --triplet "$VCPKG_TRIPLET" \
   --clean-after-build \
@@ -119,6 +123,7 @@ if [ "$POSTGRESQL_MAJOR_VERSION" -ge 16 ]; then
   build_directory="$runner_temp/postgresql-build"
   python_path="$(cygpath -m "$(command -v python)")"
 
+  build_phase 'Configure PostgreSQL with Meson'
   meson setup "$build_directory" "$SOURCE_DIRECTORY" \
     --prefix "$(cygpath -m "$INSTALL_DIRECTORY")" \
     --buildtype release \
@@ -145,7 +150,9 @@ if [ "$POSTGRESQL_MAJOR_VERSION" -ge 16 ]; then
     -Duuid=none \
     -Dzlib=enabled \
     -Dzstd=enabled
+  build_phase 'Compile PostgreSQL'
   meson compile -C "$build_directory"
+  build_phase 'Install PostgreSQL'
   meson install -C "$build_directory"
 else
   # PostgreSQL 14/15's Solution.pm expects the layout of standalone Windows
@@ -200,16 +207,20 @@ PY
 
   export PATH="/c/Strawberry/perl/bin:$PATH"
   cd "$SOURCE_DIRECTORY/src/tools/msvc"
+  build_phase 'Compile PostgreSQL with MSVC'
   perl build.pl
+  build_phase 'Install PostgreSQL'
   perl install.pl "$(cygpath -m "$INSTALL_DIRECTORY")"
 fi
 
+build_phase 'Copy PostgreSQL metadata and vcpkg DLLs'
 cp "$SOURCE_DIRECTORY/COPYRIGHT" "$SOURCE_DIRECTORY/source-input.json" "$INSTALL_DIRECTORY"
 
 if [ -d "$VCPKG_INSTALLED/bin" ]; then
   find "$VCPKG_INSTALLED/bin" -maxdepth 1 -type f -name '*.dll' -exec cp {} "$INSTALL_DIRECTORY/bin/" \;
 fi
 
+build_phase 'Locate Python runtime'
 python_root="$(python - <<'PY'
 import sys
 sys.stdout.write(sys.base_prefix)
@@ -217,3 +228,4 @@ PY
 )"
 python_root="$(cygpath -u "$python_root")"
 WINDOWS_PYTHON_ROOT="$python_root" bash "$ROOT_DIRECTORY/scripts/windows-runtime.sh" bundle-source "$INSTALL_DIRECTORY"
+build_phase 'Windows build complete'
