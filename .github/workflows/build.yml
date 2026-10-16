@@ -85,7 +85,7 @@ jobs:
 
       - name: Set up baseline CPU emulation
         if: ${{ matrix.baseline_build == true }}
-        run: docker run --privileged --rm tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 --install all # 2026-09-27
+        run: bash scripts/setup-binfmt.sh
 
       - name: Check baseline CPU enforcement
         if: ${{ matrix.baseline_build == true }}
@@ -142,6 +142,15 @@ jobs:
       - name: Build (Windows)
         if: ${{ contains(matrix.target, '-windows-') }}
         run: ./scripts/build-windows.sh "$VERSION" "${{ matrix.target }}" "${{ matrix.vcpkg_triplet }}"
+
+      - name: Preserve Windows build diagnostics
+        if: ${{ failure() && contains(matrix.target, '-windows-') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: diagnostics-${{ env.ARTIFACT_NAME }}
+          path: ${{ runner.temp }}/postgresql-build/meson-logs/
+          if-no-files-found: ignore
+          retention-days: 7
 
       #
       # Package

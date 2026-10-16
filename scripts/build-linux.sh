@@ -18,8 +18,7 @@ export BUILD_REVISION="${BUILD_REVISION:-$(git rev-parse HEAD)}"
 PLATFORM="$3"
 
 # Install emulators for builds targeting another CPU architecture.
-# tonistiigi/binfmt:latest, resolved 2026-09-27
-docker run --privileged --rm tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 --install all
+bash "$ROOT_DIRECTORY/scripts/setup-binfmt.sh"
 
 case "$TARGET" in
   i586-unknown-linux-gnu|i586-unknown-linux-musl|arm-unknown-linux-gnueabihf|arm-unknown-linux-musleabi)
