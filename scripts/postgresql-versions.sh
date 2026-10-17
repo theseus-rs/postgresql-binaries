@@ -1,8 +1,9 @@
 #!/bin/sh
 
-# The supported major releases and the current packaging version of each.
-# Keep this in ascending order. CI, source validation and release verification
-# share this policy; the runtime test also uses it without Python or jq.
+# The supported major releases, current packaging versions and EOL dates.
+# Keep versions in ascending order and update the eol command when adding majors.
+# CI, source validation, release verification and upstream checks share this
+# policy; the runtime test also uses it without Python or jq.
 set -eu
 versions='14.24.0 15.19.0 16.15.0 17.11.0 18.6.0'
 
@@ -29,6 +30,17 @@ case "${1:-}" in
         for version in $versions; do printf '%s.0.0\n' "${version%%.*}"; done
         ;;
     validate) validate "${2:?Missing version}" ;;
+    eol)
+        validate "${2:?Missing version}"
+        case "${2%%.*}" in
+            14) echo 2026-11-12 ;;
+            15) echo 2027-11-11 ;;
+            16) echo 2028-11-09 ;;
+            17) echo 2029-11-08 ;;
+            18) echo 2030-11-14 ;;
+            *) echo "Missing EOL date for PostgreSQL $2" >&2; exit 1 ;;
+        esac
+        ;;
     supports-target)
         validate "${2:?Missing version}"
         # PostgreSQL's Meson Windows ARM64 build starts with PostgreSQL 16.
@@ -51,7 +63,7 @@ case "${1:-}" in
         if [ "${2%.*}" = 16.0 ]; then echo postgresql-16.0-llvm16.patch; fi
         ;;
     *)
-        echo "Usage: $0 <current|latest|oldest|validate VERSION|supports-target VERSION TARGET|baseline-llvm VERSION|source-patches VERSION>" >&2
+        echo "Usage: $0 <current|latest|oldest|validate VERSION|eol VERSION|supports-target VERSION TARGET|baseline-llvm VERSION|source-patches VERSION>" >&2
         exit 1
         ;;
 esac
