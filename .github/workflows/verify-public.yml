@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Set up CPU emulation
         if: ${{ contains(matrix.target, '-linux-') }}
-        run: docker run --privileged --rm tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 --install all # 2026-09-27
+        run: bash scripts/setup-binfmt.sh
 
       - name: Check baseline CPU enforcement
         if: ${{ matrix.baseline_build == true }}
