@@ -37,43 +37,53 @@ perl -ne 'chomp; die "Invalid lock definition: $_" unless /^PG_LWLOCK\((\d+),\s+
 
 # Reconstruct only the patch's old context, padding untouched lines. This keeps
 # a real Git/apply fixture without vendoring a complete PostgreSQL checkout.
-python3 - "$root/scripts/patches/postgresql-16.0-llvm16.patch" "$temporary/upstream" <<'PYTHON'
+python3 - "$temporary/upstream" \
+    "$root/scripts/patches/postgresql-16.0-llvm16.patch" \
+    "$root/scripts/patches/postgresql-16-macos-strchrnul.patch" <<'PYTHON'
 from pathlib import Path
 import re
 import sys
 
 files = {}
-current = None
-position = None
-for line in Path(sys.argv[1]).read_text().splitlines(keepends=True):
-    if line.startswith('diff --git '):
-        current = None
-        position = None
-    elif line.startswith('--- a/'):
-        current = line[6:].strip()
-        files[current] = []
-    elif line.startswith('@@ '):
-        position = int(re.match(r'@@ -(\d+)', line)[1]) - 1
-    elif current and position is not None and line.startswith((' ', '-')):
-        contents = files[current]
-        while len(contents) <= position:
-            contents.append('/* Unchanged fixture line. */\n')
-        contents[position] = line[1:]
-        position += 1
+for patch in sys.argv[2:]:
+    current = None
+    position = None
+    for line in Path(patch).read_text().splitlines(keepends=True):
+        if line.startswith('diff --git '):
+            current = None
+            position = None
+        elif line.startswith('--- a/'):
+            current = line[6:].strip()
+            files.setdefault(current, [])
+        elif line.startswith('@@ '):
+            position = int(re.match(r'@@ -(\d+)', line)[1]) - 1
+        elif current and position is not None and line.startswith((' ', '-')):
+            contents = files[current]
+            while len(contents) <= position:
+                contents.append('/* Unchanged fixture line. */\n')
+            assert contents[position] in ('/* Unchanged fixture line. */\n', line[1:])
+            contents[position] = line[1:]
+            position += 1
 for name, contents in files.items():
-    path = Path(sys.argv[2]) / name
+    path = Path(sys.argv[1]) / name
     path.parent.mkdir(parents=True, exist_ok=True)
+    if name == 'configure.ac':
+        contents[0] = 'AC_INIT([PostgreSQL], [16.0], [])\n'
     path.write_text(''.join(contents))
+    if name == 'configure':
+        path.chmod(0o755)
 PYTHON
-printf 'AC_INIT([PostgreSQL], [16.0], [])\n' > "$temporary/upstream/configure.ac"
 git -C "$temporary/upstream" -c core.autocrlf=false add .
 git -C "$temporary/upstream" -c user.name=Test -c user.email=test@example.invalid \
     commit --quiet -m llvm-fixture
 git -C "$temporary/upstream" tag REL_16_0
 "$root/scripts/fetch-source.sh" 16.0.7 "$temporary/patched source"
-git -C "$temporary/patched source" apply --reverse --check \
-    "$root/scripts/patches/postgresql-16.0-llvm16.patch"
-python3 - "$temporary/patched source/source-input.json" "$root/scripts/patches/postgresql-16.0-llvm16.patch" <<'PYTHON'
+for patch in postgresql-16.0-llvm16.patch postgresql-16-macos-strchrnul.patch; do
+    git -C "$temporary/patched source" apply --reverse --check "$root/scripts/patches/$patch"
+done
+python3 - "$temporary/patched source/source-input.json" \
+    "$root/scripts/patches/postgresql-16.0-llvm16.patch" \
+    "$root/scripts/patches/postgresql-16-macos-strchrnul.patch" <<'PYTHON'
 import hashlib
 import json
 from pathlib import Path
@@ -82,8 +92,8 @@ import sys
 record = json.loads(Path(sys.argv[1]).read_text())
 assert record['version'] == '16.0'
 assert record['source_patches'] == [{
-    'patch': 'postgresql-16.0-llvm16.patch',
-    'sha256': hashlib.sha256(Path(sys.argv[2]).read_bytes()).hexdigest(),
-}]
+    'patch': Path(patch).name,
+    'sha256': hashlib.sha256(Path(patch).read_bytes()).hexdigest(),
+} for patch in sys.argv[2:]]
 PYTHON
-echo 'Source checkout preserves LF and applies the LLVM backport with Windows Git settings'
+echo 'Source checkout preserves LF and records both backports with Windows Git settings'

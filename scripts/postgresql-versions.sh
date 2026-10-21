@@ -61,6 +61,19 @@ case "${1:-}" in
         # LLVM 16 support shipped in PostgreSQL 16.1. Apply its upstream fix
         # to every packaging revision of 16.0, across all build paths.
         if [ "${2%.*}" = 16.0 ]; then echo postgresql-16.0-llvm16.patch; fi
+        # These upstream releases fixed strchrnul detection for macOS 15.4
+        # SDKs when targeting macOS 15.0. Backport the fix to older sources.
+        case "${2%%.*}" in
+            14) first_fixed_minor=18 ;;
+            15) first_fixed_minor=13 ;;
+            16) first_fixed_minor=9 ;;
+            17) first_fixed_minor=5 ;;
+            *) first_fixed_minor=0 ;;
+        esac
+        upstream_version=${2%.*}
+        if [ "${upstream_version#*.}" -lt "$first_fixed_minor" ]; then
+            printf 'postgresql-%s-macos-strchrnul.patch\n' "${2%%.*}"
+        fi
         ;;
     *)
         echo "Usage: $0 <current|latest|oldest|validate VERSION|eol VERSION|supports-target VERSION TARGET|baseline-llvm VERSION|source-patches VERSION>" >&2

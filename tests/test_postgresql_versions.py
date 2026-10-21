@@ -79,8 +79,22 @@ class PostgreSQLVersionTests(unittest.TestCase):
 
     def test_llvm_backport_only_applies_to_postgresql_16_0(self):
         for version in ("16.0.0", "16.0.12"):
-            self.assertEqual(matrix.policy("source-patches", version), "postgresql-16.0-llvm16.patch")
+            self.assertEqual(matrix.policy("source-patches", version).splitlines(),
+                             ["postgresql-16.0-llvm16.patch", "postgresql-16-macos-strchrnul.patch"])
         for version in ("14.0.0", "15.0.0", "16.1.0", "16.15.0", "17.0.0", "18.0.0"):
+            self.assertNotIn("postgresql-16.0-llvm16.patch",
+                             matrix.policy("source-patches", version).splitlines())
+
+    def test_macos_backport_stops_at_the_upstream_fix(self):
+        for major, first_fixed in ((14, 18), (15, 13), (16, 9), (17, 5)):
+            expected = f"postgresql-{major}-macos-strchrnul.patch"
+            for minor in range(first_fixed + 2):
+                for revision in (0, 12):
+                    version = f"{major}.{minor}.{revision}"
+                    with self.subTest(version=version):
+                        patches = matrix.policy("source-patches", version).splitlines()
+                        self.assertEqual(expected in patches, minor < first_fixed)
+        for version in ("18.0.0", "18.6.12"):
             self.assertEqual(matrix.policy("source-patches", version), "")
 
 
