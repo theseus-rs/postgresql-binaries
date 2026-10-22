@@ -71,17 +71,18 @@ jobs:
       upload_artifacts: ${{ github.event_name == 'pull_request' }}
 
   compatibility:
-    name: Oldest PostgreSQL ${{ matrix.version }}
+    name: Oldest PostgreSQL ${{ matrix.version }} (${{ matrix.target }})
     needs: [initialize, regression]
     strategy:
       fail-fast: false
       matrix:
         version: ${{ fromJSON(needs.initialize.outputs.versions).oldest }}
+        target: [i586-unknown-linux-musl, aarch64-apple-darwin, x86_64-apple-darwin]
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.initialize.outputs.ref }}
       version: ${{ matrix.version }}
-      target: i586-unknown-linux-musl
+      target: ${{ matrix.target }}
       upload_artifacts: ${{ github.event_name == 'pull_request' }}
 
   supported_versions_result:
