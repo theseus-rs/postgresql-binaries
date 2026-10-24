@@ -48,9 +48,9 @@ class PostgreSQLVersionTests(unittest.TestCase):
     def test_old_releases_and_packaging_revisions_remain_accepted(self):
         for version in ("14.0.0", "15.0.0", "16.0.0", "17.0.0", "18.0.12"):
             with self.subTest(version=version):
-                entries = matrix.build_matrix(version, "i586-unknown-linux-musl")["include"]
+                entries = matrix.build_matrix(version, "x86_64-unknown-linux-musl")["include"]
                 self.assertEqual(len(entries), 1)
-                self.assertTrue(entries[0]["baseline_build"])
+                self.assertEqual(entries[0]["target"], "x86_64-unknown-linux-musl")
 
     def test_eol_dates_cover_every_supported_major_and_packaging_revision(self):
         for version in matrix.policy("current").splitlines():
@@ -64,18 +64,13 @@ class PostgreSQLVersionTests(unittest.TestCase):
         for version in ("13.23.0", "19.0.0", "16.0", "16.0.0-extra", "16.0.0\n18.6.0", "", "016.0.0"):
             with self.subTest(version=version), self.assertRaises(subprocess.CalledProcessError):
                 matrix.policy("validate", version)
-        for version, target in (("14.0.0", "aarch64-pc-windows-msvc"), ("18.6.0", "unknown")):
+        for version, target in (("14.0.0", "aarch64-pc-windows-msvc"), ("18.6.0", "unknown"),
+                                ("18.6.0", "i586-unknown-linux-musl"), ("18.6.0", "i686-unknown-linux-musl")):
             with self.subTest(target=target), self.assertRaises(ValueError):
                 matrix.build_matrix(version, target)
         for version in ("13.23.0", "18.6", "18.6.0-extra"):
             with self.subTest(version=version), self.assertRaises(subprocess.CalledProcessError):
                 matrix.policy("eol", version)
-
-    def test_jit_uses_llvm_compatible_with_oldest_sources(self):
-        for major in (14, 15):
-            self.assertEqual(matrix.policy("baseline-llvm", f"{major}.0.0"), "")
-        for version in ("16.0.0", "16.15.0", "17.0.0", "17.11.0", "18.0.0", "18.6.0"):
-            self.assertEqual(matrix.policy("baseline-llvm", version), "16.0.6")
 
     def test_llvm_backport_only_applies_to_postgresql_16_0(self):
         for version in ("16.0.0", "16.0.12"):

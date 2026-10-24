@@ -50,12 +50,6 @@ case "${1:-}" in
             echo true
         fi
         ;;
-    baseline-llvm)
-        validate "${2:?Missing version}"
-        # Match Alpine and macOS. PostgreSQL 16.0 also needs the upstream
-        # opaque-pointer backport selected by source-patches below.
-        if [ "${2%%.*}" -ge 16 ]; then echo 16.0.6; fi
-        ;;
     source-patches)
         validate "${2:?Missing version}"
         # LLVM 16 support shipped in PostgreSQL 16.1. Apply its upstream fix
@@ -76,7 +70,7 @@ case "${1:-}" in
         fi
         ;;
     *)
-        echo "Usage: $0 <current|latest|oldest|validate VERSION|eol VERSION|supports-target VERSION TARGET|baseline-llvm VERSION|source-patches VERSION>" >&2
+        echo "Usage: $0 <current|latest|oldest|validate VERSION|eol VERSION|supports-target VERSION TARGET|source-patches VERSION>" >&2
         exit 1
         ;;
 esac

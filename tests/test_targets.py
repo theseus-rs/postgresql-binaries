@@ -14,6 +14,17 @@ targets = json.loads((root / "targets.json").read_text())
 
 
 class TargetTests(unittest.TestCase):
+    def test_supported_target_inventory(self):
+        expected = {
+            "aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu",
+            "aarch64-unknown-linux-musl", "x86_64-unknown-linux-musl",
+            "aarch64-apple-darwin", "x86_64-apple-darwin",
+            "aarch64-pc-windows-msvc", "x86_64-pc-windows-msvc",
+        }
+        self.assertEqual({target["target"] for target in targets}, expected)
+        self.assertEqual(len(targets), len(expected))
+        self.assertTrue(all(target["enabled"] for target in targets))
+
     @unittest.skipUnless(shutil.which("readelf"), "GNU readelf is required")
     def test_glibc_requirement_floor(self):
         for version, definition in (("2.35", False), ("2.36", False),
@@ -81,18 +92,18 @@ class TargetTests(unittest.TestCase):
             self.assertIn("python3 scripts/build-matrix.py", content)
             self.assertIn("matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}", content)
 
-    def test_reject_big_endian_mips_and_n32(self):
-        target = next(t for t in targets if t["id"] == "mips64el-unknown-linux-gnuabi64")
-        info = dict(bits=64, endian="little", machine=8, flags=0x80000007, interpreter=target["interpreter"])
-        module.validate(info, target, True)
-        for field, value in [("endian", "big"), ("bits", 32), ("flags", 0x20), ("flags", 0x80004000), ("flags", 0xa0000007), ("interpreter", "/wrong/loader")]:
-            with self.assertRaises(ValueError):
-                module.validate({**info, field: value}, target, True)
-
-    def test_reject_hard_float_for_soft_float_target(self):
-        target = next(t for t in targets if t["id"] == "arm-unknown-linux-gnueabi")
-        with self.assertRaises(ValueError):
-            module.validate(dict(bits=32, endian="little", machine=40, flags=0x5000400, interpreter=target["interpreter"]), target)
+    def test_linux_architecture_and_loader_must_match(self):
+        for target in targets:
+            if "-linux-" not in target["target"]:
+                continue
+            info = dict(bits=64, endian="little", machine=target["machine"], flags=0,
+                        interpreter=target["interpreter"])
+            module.validate(info, target, True)
+            wrong_machine = 62 if target["machine"] == 183 else 183
+            for field, value in (("endian", "big"), ("bits", 32),
+                                 ("machine", wrong_machine), ("interpreter", "/wrong/loader")):
+                with self.subTest(target=target["target"], field=field), self.assertRaises(ValueError):
+                    module.validate({**info, field: value}, target, True)
 
 
 if __name__ == "__main__":

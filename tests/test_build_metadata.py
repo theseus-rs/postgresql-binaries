@@ -11,7 +11,7 @@ script = Path(__file__).parents[1] / "scripts/build-metadata.py"
 
 
 class BuildMetadataTests(unittest.TestCase):
-    def generate(self, target, baseline=False, revision="a" * 40):
+    def generate(self, target, revision="a" * 40):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "include").mkdir()
@@ -22,13 +22,11 @@ class BuildMetadataTests(unittest.TestCase):
             (root / "share/postgresql/timezone/UTC").touch()
             source = {"commit": "b" * 40, "url": "https://example.test/postgresql.git"}
             (root / "source-input.json").write_text(json.dumps(source))
-            runtime = {"bundled": [], "dependency_builder": "Buildroot 2026.08"}
+            runtime = {"bundled": []}
             (root / "runtime-dependencies.json").write_text(json.dumps(runtime))
-            if baseline:
-                (root / "buildroot.config").write_text("BR2_x86_i586=y\n")
             helper = root / "config.py"
             helper.write_text("import sys\nprint({'--configure': '--with-icu', "
-                              "'--cc': 'target-gcc', '--cflags': '-march=i586', "
+                              "'--cc': 'target-gcc', '--cflags': '-march=x86-64', "
                               "'--ldflags': '-L/target', '--version': 'target-gcc 15'}[sys.argv[1]])\n")
             environment = {**os.environ, "BUILD_REVISION": revision,
                            "PG_CONFIG_COMMAND": json.dumps([sys.executable, str(helper)]),
@@ -45,12 +43,11 @@ class BuildMetadataTests(unittest.TestCase):
         self.assertTrue(build["features"]["python"])
         self.assertTrue(build["features"]["bundled_timezone"])
 
-    def test_baseline_uses_target_configuration(self):
-        build = self.generate("i586-unknown-linux-gnu", baseline=True)
+    def test_linux_uses_target_configuration(self):
+        build = self.generate("x86_64-unknown-linux-gnu")
         self.assertEqual(build["configure_flags"], "--with-icu")
         self.assertEqual(build["toolchain"]["compiler_version"], "target-gcc 15")
-        self.assertEqual(build["toolchain"]["buildroot_config"], "BR2_x86_i586=y\n")
-        self.assertNotIn("installed_packages", build["toolchain"])
+        self.assertEqual(build["toolchain"]["cflags"], "-march=x86-64")
 
     def test_rejects_invalid_revision(self):
         with self.assertRaises(subprocess.CalledProcessError) as error:

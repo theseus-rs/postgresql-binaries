@@ -83,25 +83,6 @@ jobs:
       # Linux Build
       #
 
-      - name: Set up baseline CPU emulation
-        if: ${{ matrix.baseline_build == true }}
-        run: bash scripts/setup-binfmt.sh
-
-      - name: Check baseline CPU enforcement
-        if: ${{ matrix.baseline_build == true }}
-        timeout-minutes: 2
-        env:
-          TARGET: ${{ matrix.target }}
-          PLATFORM: ${{ matrix.platform }}
-          QEMU_CPU: ${{ matrix.qemu_cpu }}
-        run: ./scripts/test-baseline-cpu.sh
-
-      - name: Install source build prerequisites
-        if: ${{ matrix.baseline_build == true }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential bc bzip2 cpio file git jq patchelf patch perl python3 rsync unzip wget
-
       - name: Build (Linux)
         env:
           TARGET_CFLAGS: ${{ matrix.cflags }}
@@ -220,9 +201,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           QEMU_CPU: ${{ matrix.qemu_cpu }}
         run: |
-          if [ -n "${RUNTIME_IMAGE:-}" ]; then
-            : # Source-built targets provide their matching minimal runtime.
-          elif [[ "$TARGET" == *musl* ]]; then
+          if [[ "$TARGET" == *musl* ]]; then
             export RUNTIME_IMAGE=alpine:3.19.0@sha256:51b67269f354137895d43f3b3d810bfacd3945438e94dc5ac55fdac340352f48
           elif [[ "$TARGET" == *linux* ]]; then
             export RUNTIME_IMAGE=debian:12.4@sha256:79becb70a6247d277b59c09ca340bbe0349af6aacb5afa90ec349528b53ce2c9
