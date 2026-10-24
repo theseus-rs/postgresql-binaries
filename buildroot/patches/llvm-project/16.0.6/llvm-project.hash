@@ -1,5 +1,0 @@
-# Downloaded from https://github.com/llvm/llvm-project/releases/tag/llvmorg-16.0.6
-sha256  ce5e71081d17ce9e86d7cbcfa28c4b04b9300f8fb7e78422b1feb6bc52c3028e  llvm-project-16.0.6.src.tar.xz
-# License files from the same source archive.
-sha256  8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee  llvm/LICENSE.TXT
-sha256  ebcd9bbf783a73d05c53ba4d586b8d5813dcdf3bbec50265860ccc885e606f47  clang/LICENSE.TXT

@@ -47,10 +47,7 @@ result["runtime"] = json.loads((root / "runtime-dependencies.json").read_text())
 if result["build_mode"] == "repackaged-edb":
     result["runtime"]["verification_limit"] = "EDB upstream compiler/input authentication limits remain; DLL closure is audited"
 
-if (root / "buildroot.config").exists():
-    result["toolchain"]["dependency_builder"] = result["runtime"]["dependency_builder"]
-    result["toolchain"]["buildroot_config"] = (root / "buildroot.config").read_text()
-elif Path("/etc/debian_version").exists() and shutil.which("dpkg-query"):
+if Path("/etc/debian_version").exists() and shutil.which("dpkg-query"):
     result["toolchain"]["installed_packages"] = subprocess.check_output(["dpkg-query", "-W", "-f=${Package} ${Version}\n"], text=True).splitlines()
 elif shutil.which("apk"):
     result["toolchain"]["installed_packages"] = subprocess.check_output(["apk", "info", "-v"], text=True).splitlines()

@@ -7,9 +7,8 @@ It does not promise that every historical minor builds with today's compilers.
 
 | Family | Build/test baseline | Required host ABI | CPU baseline / evidence limit |
 | --- | --- | --- | --- |
-| Linux GNU | Debian 12.4 base; i586 and ARMv6 hard-float use Buildroot source builds with pinned glibc 2.36 | glibc 2.36 and matching ELF loader | Explicit flags and constrained QEMU models in `targets.json`; CPU minima require passing execution evidence |
-| Linux musl (distro builds) | Alpine 3.19.0 base; distro package updates recorded | musl 1.2.4 and matching dynamic ELF loader | Constrained QEMU tests; dynamically linked |
-| Linux musl (i586 / ARMv6 soft-float) | Buildroot 2026.08 source builds of libc and dependencies; matching minimal runtime images | Buildroot musl version recorded in each artifact and matching dynamic ELF loader | Pentium without SSE; ARM1176 with VFP disabled; dynamically linked |
+| Linux GNU ARM64 / x64 | Debian 12.4 base | glibc 2.36 and matching ELF loader | Explicit flags and constrained QEMU models in `targets.json`; CPU minima require passing execution evidence |
+| Linux musl ARM64 / x64 | Alpine 3.19.0 base; distro package updates recorded | musl 1.2.4 and matching dynamic ELF loader | Constrained QEMU tests; dynamically linked |
 | macOS ARM64 / x64 | macOS 15 CI with deployment target 15.0 | macOS system frameworks and libSystem | ARM64 / x86_64; older macOS is not certified |
 | Windows x64 | Native `windows-latest` CI; PostgreSQL source build with MSVC and vcpkg dependencies | Windows and Microsoft Visual C++ runtime (`vcruntime140` family) | x64; relocated tar and zip archives tested on that runner; no older Windows minimum is certified |
 | Windows ARM64 | Native `windows-11-arm` CI; PostgreSQL 16–18 source build with MSVC and vcpkg dependencies | Windows ARM64 and Microsoft Visual C++ runtime (`vcruntime140` family) | ARM64; relocated tar and zip archives tested on that runner; no older Windows minimum is certified |

@@ -81,10 +81,6 @@ RUN major_version=$(echo "$POSTGRESQL_VERSION" | awk -F. '{print $1}') && \
     make -C contrib install
 
 # Audit executables, extension modules, and their transitive dependencies.
-COPY scripts/install-patchelf.sh /usr/local/bin/
-RUN if [ "$(dpkg --print-architecture)" = mips64el ]; then \
-        bash /usr/local/bin/install-patchelf.sh; \
-    fi
 COPY scripts/bundle-runtime.sh scripts/collect-notices.sh scripts/collect-notices.py scripts/alpine-notices.py /usr/local/bin/
 RUN bash /usr/local/bin/bundle-runtime.sh /opt/postgresql && \
     bash /usr/local/bin/collect-notices.sh /opt/postgresql

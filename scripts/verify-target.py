@@ -35,18 +35,6 @@ def validate(info, target, executable=False):
             raise ValueError(f"{field}: expected {target[field]}, got {info[field]}")
     if (executable or info["interpreter"]) and info["interpreter"] != target["interpreter"]:
         raise ValueError(f"Wrong ELF interpreter: {info['interpreter']}")
-    if info["machine"] == 40:
-        if info["flags"] >> 24 != 5:
-            raise ValueError("ARM EABI5 required")
-        if bool(info["flags"] & 0x400) != (target["float_abi"] == "hard"):
-            raise ValueError("ARM float ABI mismatch")
-    if info["machine"] == 8:
-        if info["flags"] & (0xf000 | 0x20):
-            raise ValueError("MIPS requires the N64 ABI, not N32/O32/O64/EABI")
-        if info["flags"] & 0xf0000000 > 0x80000000:
-            raise ValueError("MIPS ISA exceeds the MIPS64r2 baseline")
-    if info["machine"] == 21 and info["flags"] & 3 != 2:
-        raise ValueError("PowerPC64 ELFv2 ABI required")
 
 
 def verify(root, target):

@@ -13,9 +13,22 @@ coverage, support tiers and known limitations. Musl archives are dynamically lin
 ## Choosing an installation package
 
 Installation packages use the pattern `postgresql-<version>-<target>.<extension>`, where`<version>` is the
-PostgreSQL version, `<target>` is the target triple for the platform, and `<extension>` is the archive file
-extension.  To find the `<target>` triple for your platform run `rustc -vV` and look for the value of the
-`host` field.  The target triple can be obtained programmatically in rust using the [target-triple](https://crates.io/crates/target-triple) crate.
+PostgreSQL version, `<target>` is the target tuple for the platform, and `<extension>` is the archive file
+extension.  To find the `<target>` tuple for your platform run `rustc -vV` and look for the value of the
+`host` field.  The target tuple can be obtained programmatically in rust using the [target-tuple](https://crates.io/crates/target-tuple) crate.
+
+The supported target tuples are:
+
+| Platform | ARM64 | x86-64 |
+| --- | --- | --- |
+| Linux GNU | `aarch64-unknown-linux-gnu` | `x86_64-unknown-linux-gnu` |
+| Linux musl | `aarch64-unknown-linux-musl` | `x86_64-unknown-linux-musl` |
+| macOS | `aarch64-apple-darwin` | `x86_64-apple-darwin` |
+| Windows MSVC | `aarch64-pc-windows-msvc` | `x86_64-pc-windows-msvc` |
+
+Windows ARM64 packages require PostgreSQL 16 or newer. Other targets support
+PostgreSQL 14–18. Previously published archives for retired targets remain
+available; future releases support only the targets above.
 
 ## Versioning
 
@@ -27,8 +40,8 @@ of PostgreSQL are released or new builds of existing versions are required for b
 ## Building locally
 
 The build workflow calls the same per-OS Bash scripts that can be run locally. Pass the full project
-version (`<postgres major>.<postgres minor>.<release>`) and target triple. Linux also requires a Docker
-platform, and Windows requires a vcpkg triplet; matching values are listed in
+version (`<postgres major>.<postgres minor>.<release>`) and target tuple. Linux also requires a Docker
+platform, and Windows requires a vcpkg tuplet; matching values are listed in
 [the target inventory](targets.json).
 
 Run these examples from the repository root:
@@ -78,17 +91,7 @@ docker run --rm --platform linux/amd64 \
 
 Archive creation and release uploads are handled by the GitHub Actions workflow.
 
-The i586 GNU/musl, ARMv6 GNU hard-float, and ARMv6 musl soft-float targets use a
-pinned Buildroot source build for their libc and dependencies. These builds also
-require the Linux host tools listed in the workflow's source-build prerequisites.
-Set `BUILDROOT_CACHE` to retain downloaded sources and build outputs. Their minimal
-test images are named `postgresql-runtime:<target>` and contain the matching libc
-and a shell; other runtime libraries must come from the packaged archive. CI runs
-them under Pentium or ARM1176 emulation, with VFP disabled for soft-float musl.
-The GNU source builds pin the glibc 2.36 maintenance branch to retain the existing
-Debian 12 libc floor. Archive validation also rejects newer required GLIBC symbols.
-
-CI job IDs and artifact names use the target triples. Required build checks use
+CI job IDs and artifact names use the target tuples. Required build checks use
 `Build / <target>`, independently of the selected GitHub runner.
 
 ## License

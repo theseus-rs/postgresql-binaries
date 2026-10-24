@@ -17,14 +17,14 @@ export BUILD_REVISION="${BUILD_REVISION:-$(git rev-parse HEAD)}"
 
 PLATFORM="$3"
 
+case "$TARGET" in
+  aarch64-unknown-linux-gnu|x86_64-unknown-linux-gnu|aarch64-unknown-linux-musl|x86_64-unknown-linux-musl) ;;
+  *) echo "Unsupported Linux target: $TARGET" >&2; exit 1 ;;
+esac
+python3 "$ROOT_DIRECTORY/scripts/build-matrix.py" --version "$VERSION" --target "$TARGET" >/dev/null
+
 # Install emulators for builds targeting another CPU architecture.
 bash "$ROOT_DIRECTORY/scripts/setup-binfmt.sh"
-
-case "$TARGET" in
-  i586-unknown-linux-gnu|i586-unknown-linux-musl|arm-unknown-linux-gnueabihf|arm-unknown-linux-musleabi)
-    exec "$ROOT_DIRECTORY/scripts/build-baseline-linux.sh" "$VERSION" "$TARGET" "$PLATFORM"
-    ;;
-esac
 
 if [[ "$TARGET" == *musl* ]]; then
   DOCKERFILE="dockerfiles/Dockerfile.linux-musl"
