@@ -5,8 +5,7 @@ Each installation includes `source-input.json`, `build-manifest.json`, and
 and `dependency-notices/`. These record the resolved PostgreSQL source commit,
 source/input digests, checked-out build revision, target, compiler/configure
 settings, generated features, and bundled/system dependency inventory. Windows
-source builds retain PostgreSQL, vcpkg, and CPython notices. Buildroot targets
-also record their build configuration and dependency builder.
+source builds retain PostgreSQL, vcpkg, and CPython notices.
 Source-server authentication uses CA-validated HTTPS; no release-tag signature
 is claimed.
 
