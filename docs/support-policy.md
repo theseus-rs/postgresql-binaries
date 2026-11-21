@@ -11,21 +11,21 @@ It does not promise that every historical minor builds with today's compilers.
 | Linux musl ARM64 / x64 | Alpine 3.19.0 base; distro package updates recorded | musl 1.2.4 and matching dynamic ELF loader | Constrained QEMU tests; dynamically linked |
 | macOS ARM64 / x64 | macOS 15 CI with deployment target 15.0 | macOS system frameworks and libSystem | ARM64 / x86_64; older macOS is not certified |
 | Windows x64 | Native `windows-latest` CI; PostgreSQL source build with MSVC and vcpkg dependencies | Windows and Microsoft Visual C++ runtime (`vcruntime140` family) | x64; relocated tar and zip archives tested on that runner; no older Windows minimum is certified |
-| Windows ARM64 | Native `windows-11-arm` CI; PostgreSQL 16–18 source build with MSVC and vcpkg dependencies | Windows ARM64 and Microsoft Visual C++ runtime (`vcruntime140` family) | ARM64; relocated tar and zip archives tested on that runner; no older Windows minimum is certified |
+| Windows ARM64 | Native `windows-11-arm` CI; PostgreSQL 16–19 source build with MSVC and vcpkg dependencies | Windows ARM64 and Microsoft Visual C++ runtime (`vcruntime140` family) | ARM64; relocated tar and zip archives tested on that runner; no older Windows minimum is certified |
 
 ## Feature matrix
 
 The following is the intended source-build matrix.
-Windows x64 supports PostgreSQL 14–18; Windows ARM64 supports 16–18. "All" means
+Windows x64 supports PostgreSQL 15–19; Windows ARM64 supports 16–19. "All" means
 all supported majors for that platform.
 
-| Feature | GNU 14–18 | musl 14–18 | macOS 14–18 | Windows source builds |
+| Feature | GNU 15–19 | musl 15–19 | macOS 15–19 | Windows source builds |
 | --- | --- | --- | --- | --- |
 | ICU, OpenSSL, XML/XSLT, LZ4 | All | All | All | All |
 | readline | All | All | All | Disabled |
-| Zstandard | 16–18 | 16–18 | 16–18 | 16–18 |
-| PL/Python plus standard library | 15–18 | 15–18 | 15–18 | 15–18 on x64; 16–18 on ARM64; matching CPython ABI bundled |
-| LLVM JIT | Disabled | 16–18 | 16–18 | Disabled |
+| Zstandard | 16–19 | 16–19 | 16–19 | 16–19 |
+| PL/Python plus standard library | 15–19 | 15–19 | 15–19 | 15–19 on x64; 16–19 on ARM64; matching CPython ABI bundled |
+| LLVM JIT | Disabled | 16–19 | 16–19 | Disabled |
 | PostgreSQL timezone database | All | All | All | All |
 | LDAP | Disabled | Disabled | Disabled | Disabled |
 | Perl / Tcl PostgreSQL extensions | Disabled | Disabled | Disabled | Disabled |
@@ -37,8 +37,10 @@ Full upstream regression suites and every optional extension are not covered.
 Follow [PostgreSQL's upstream support dates](https://www.postgresql.org/support/versioning/).
 Remove a major from active build/support policy at upstream EOL; retain old
 immutable downloads for reproducibility, clearly without ongoing security fixes.
-PostgreSQL 14 reaches EOL on November 12, 2026. Adding a new major requires all
-feature and platform checks; beta releases are not automatically enabled.
+Active support covers PostgreSQL 15–19. PostgreSQL 14 reached EOL on November 12,
+2026 and is no longer built or supported. PostgreSQL 19 reaches EOL on November 19,
+2031. Adding a new major requires all feature and platform checks; beta releases
+are not automatically enabled.
 
 Versions are `<upstream major>.<upstream minor>.<packaging revision>`. Increment
 the final component for a confirmed packaging fix, dependency refresh or target

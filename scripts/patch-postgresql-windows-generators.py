@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Use winflexbison3's executable names in PostgreSQL 14/15 MSVC helpers."""
+"""Use winflexbison3's executable names in PostgreSQL 15 MSVC helpers."""
 
 from pathlib import Path
 import sys

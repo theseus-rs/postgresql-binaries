@@ -13,6 +13,16 @@ spec.loader.exec_module(module)
 
 
 class UpstreamTests(unittest.TestCase):
+    def test_current_policy_matches_postgresql_19_release_feed(self):
+        feed = '<rss><channel>' + ''.join(
+            f'<item><title>{version}</title><description>{status}</description></item>'
+            for version, status in (("19.0", "stable"), ("18.7", "stable"),
+                                    ("17.12", "stable"), ("16.16", "stable"),
+                                    ("15.20", "stable"), ("14.25", "unsupported"))
+        ) + '</channel></rss>'
+        self.assertEqual(module.compare(feed, module.supported_versions(),
+                                        datetime.date(2026, 11, 20)), [])
+
     def test_update_and_eol_are_reported(self):
         feed = '<rss><channel><item><title>18.6</title><description>stable</description></item></channel></rss>'
         supported = [{"major": 18, "version": "18.5", "eol": "2030-11-14"}]

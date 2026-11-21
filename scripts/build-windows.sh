@@ -155,17 +155,23 @@ if [ "$POSTGRESQL_MAJOR_VERSION" -ge 16 ]; then
   build_phase 'Install PostgreSQL'
   meson install -C "$build_directory"
 else
-  # PostgreSQL 14/15's Solution.pm expects the layout of standalone Windows
+  # PostgreSQL 15's Solution.pm expects the layout of standalone Windows
   # dependency installers. Stage it separately from the vcpkg installation.
   legacy_dependencies="$(mktemp -d "$runner_temp/postgresql-msvc-deps.XXXXXX")"
   cp -R "$VCPKG_INSTALLED/include" "$VCPKG_INSTALLED/lib" "$VCPKG_INSTALLED/bin" "$legacy_dependencies/"
   cp "$VCPKG_INSTALLED/tools/openssl/openssl.exe" "$legacy_dependencies/bin/openssl.exe"
 
-  # vcpkg used zlib.lib before zlib 1.3.2 switched to z.lib.
-  if [ -f "$VCPKG_INSTALLED/lib/zlib.lib" ]; then
-    cp "$VCPKG_INSTALLED/lib/zlib.lib" "$legacy_dependencies/lib/zdll.lib"
-  else
-    cp "$VCPKG_INSTALLED/lib/z.lib" "$legacy_dependencies/lib/zdll.lib"
+  # Solution.pm links zdll.lib. vcpkg's MSVC import library is libz.lib
+  # with zlib 1.4, z.lib with 1.3.2, and zlib.lib with older releases.
+  for zlib_import in libz.lib z.lib zlib.lib; do
+    if [ -f "$VCPKG_INSTALLED/lib/$zlib_import" ]; then
+      cp "$VCPKG_INSTALLED/lib/$zlib_import" "$legacy_dependencies/lib/zdll.lib"
+      break
+    fi
+  done
+  if [ ! -f "$legacy_dependencies/lib/zdll.lib" ]; then
+    echo "Missing zlib import library in $VCPKG_INSTALLED/lib" >&2
+    exit 1
   fi
   cp "$VCPKG_INSTALLED/lib/lz4.lib" "$legacy_dependencies/lib/liblz4.lib"
   mkdir -p "$legacy_dependencies/lib64"

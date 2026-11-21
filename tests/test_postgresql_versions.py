@@ -18,15 +18,17 @@ class PostgreSQLVersionTests(unittest.TestCase):
             ["python3", str(ROOT / "scripts/build-matrix.py")], text=True))
         versions = [*plan["previous"], plan["latest"]]
         self.assertEqual(versions, matrix.policy("current").splitlines())
-        self.assertEqual([v.split(".")[0] for v in versions], ["14", "15", "16", "17", "18"])
+        self.assertEqual([v.split(".")[0] for v in versions], ["15", "16", "17", "18", "19"])
+        self.assertEqual(plan["latest"], "19.0.0")
+        self.assertEqual(matrix.policy("latest"), plan["latest"])
         self.assertEqual(plan["oldest"], [f"{v.split('.')[0]}.0.0" for v in versions
                                          if f"{v.split('.')[0]}.0.0" not in versions])
 
     def test_new_major_does_not_duplicate_oldest_release_artifacts(self):
-        responses = {"current": "17.11.0\n18.0.0", "oldest": "17.0.0\n18.0.0"}
+        responses = {"current": "18.7.0\n19.0.0", "oldest": "18.0.0\n19.0.0"}
         with patch.object(matrix, "policy", side_effect=lambda name: responses[name]):
-            self.assertEqual(matrix.ci_versions(), dict(latest="18.0.0", previous=["17.11.0"],
-                                                       oldest=["17.0.0"]))
+            self.assertEqual(matrix.ci_versions(), dict(latest="19.0.0", previous=["18.7.0"],
+                                                       oldest=["18.0.0"]))
 
     def test_matrix_covers_all_supported_targets(self):
         targets = json.loads((ROOT / "targets.json").read_text())
@@ -46,7 +48,7 @@ class PostgreSQLVersionTests(unittest.TestCase):
                         self.assertIsInstance(entry["pe_machine"], str)
 
     def test_old_releases_and_packaging_revisions_remain_accepted(self):
-        for version in ("14.0.0", "15.0.0", "16.0.0", "17.0.0", "18.0.12"):
+        for version in ("15.0.0", "16.0.0", "17.0.0", "18.0.12", "19.0.0", "19.0.12"):
             with self.subTest(version=version):
                 entries = matrix.build_matrix(version, "x86_64-unknown-linux-musl")["include"]
                 self.assertEqual(len(entries), 1)
@@ -57,31 +59,40 @@ class PostgreSQLVersionTests(unittest.TestCase):
             with self.subTest(version=version):
                 eol = datetime.date.fromisoformat(matrix.policy("eol", version))
                 self.assertEqual(matrix.policy("eol", f"{version.split('.')[0]}.0.12"), eol.isoformat())
-        self.assertEqual(matrix.policy("eol", "14.24.0"), "2026-11-12")
-        self.assertEqual(matrix.policy("eol", "18.6.0"), "2030-11-14")
+        self.assertEqual(matrix.policy("eol", "15.20.0"), "2027-11-11")
+        self.assertEqual(matrix.policy("eol", "19.0.0"), "2031-11-19")
 
     def test_reject_invalid_versions_and_unsupported_targets(self):
-        for version in ("13.23.0", "19.0.0", "16.0", "16.0.0-extra", "16.0.0\n18.6.0", "", "016.0.0"):
+        for version in ("13.23.0", "14.0.0", "14.25.0", "20.0.0", "16.0", "16.0.0-extra", "16.0.0\n18.6.0", "", "016.0.0"):
             with self.subTest(version=version), self.assertRaises(subprocess.CalledProcessError):
                 matrix.policy("validate", version)
-        for version, target in (("14.0.0", "aarch64-pc-windows-msvc"), ("18.6.0", "unknown"),
+        for version, target in (("15.0.0", "aarch64-pc-windows-msvc"), ("19.0.0", "unknown"),
                                 ("18.6.0", "i586-unknown-linux-musl"), ("18.6.0", "i686-unknown-linux-musl")):
             with self.subTest(target=target), self.assertRaises(ValueError):
                 matrix.build_matrix(version, target)
-        for version in ("13.23.0", "18.6", "18.6.0-extra"):
+        for version in ("13.23.0", "14.25.0", "18.6", "18.6.0-extra"):
             with self.subTest(version=version), self.assertRaises(subprocess.CalledProcessError):
                 matrix.policy("eol", version)
+
+    def test_retired_major_is_rejected_by_all_version_commands(self):
+        for version in ("14.0.0", "14.25.0", "14.25.12"):
+            for command in ("validate", "eol", "source-patches", "supports-target"):
+                args = [command, version]
+                if command == "supports-target":
+                    args.append("x86_64-unknown-linux-gnu")
+                with self.subTest(args=args), self.assertRaises(subprocess.CalledProcessError):
+                    matrix.policy(*args)
 
     def test_llvm_backport_only_applies_to_postgresql_16_0(self):
         for version in ("16.0.0", "16.0.12"):
             self.assertEqual(matrix.policy("source-patches", version).splitlines(),
                              ["postgresql-16.0-llvm16.patch", "postgresql-16-macos-strchrnul.patch"])
-        for version in ("14.0.0", "15.0.0", "16.1.0", "16.15.0", "17.0.0", "18.0.0"):
+        for version in ("15.0.0", "16.1.0", "16.16.0", "17.0.0", "18.0.0", "19.0.0"):
             self.assertNotIn("postgresql-16.0-llvm16.patch",
                              matrix.policy("source-patches", version).splitlines())
 
     def test_macos_backport_stops_at_the_upstream_fix(self):
-        for major, first_fixed in ((14, 18), (15, 13), (16, 9), (17, 5)):
+        for major, first_fixed in ((15, 13), (16, 9), (17, 5)):
             expected = f"postgresql-{major}-macos-strchrnul.patch"
             for minor in range(first_fixed + 2):
                 for revision in (0, 12):
@@ -89,7 +100,7 @@ class PostgreSQLVersionTests(unittest.TestCase):
                     with self.subTest(version=version):
                         patches = matrix.policy("source-patches", version).splitlines()
                         self.assertEqual(expected in patches, minor < first_fixed)
-        for version in ("18.0.0", "18.6.12"):
+        for version in ("18.0.0", "18.7.12", "19.0.0", "19.0.12"):
             self.assertEqual(matrix.policy("source-patches", version), "")
 
 
