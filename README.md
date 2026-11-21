@@ -27,8 +27,8 @@ The supported target tuples are:
 | Windows MSVC | `aarch64-pc-windows-msvc` | `x86_64-pc-windows-msvc` |
 
 Windows ARM64 packages require PostgreSQL 16 or newer. Other targets support
-PostgreSQL 14–18. Previously published archives for retired targets remain
-available; future releases support only the targets above.
+PostgreSQL 15–19. Previously published archives for retired versions and targets
+remain available; future releases support only the versions and targets above.
 
 ## Versioning
 
@@ -48,16 +48,16 @@ Run these examples from the repository root:
 
 ```bash
 # Linux GNU or musl (requires Docker with Buildx and privileged container support)
-./scripts/build-linux.sh 18.6.0 x86_64-unknown-linux-gnu linux/amd64
-./scripts/build-linux.sh 18.6.0 x86_64-unknown-linux-musl linux/amd64
+./scripts/build-linux.sh 19.0.0 x86_64-unknown-linux-gnu linux/amd64
+./scripts/build-linux.sh 19.0.0 x86_64-unknown-linux-musl linux/amd64
 
 # macOS (requires Xcode command line tools and Homebrew)
-./scripts/build-macos.sh 18.6.0 aarch64-apple-darwin
+./scripts/build-macos.sh 19.0.0 aarch64-apple-darwin
 # On an Intel Mac, use x86_64-apple-darwin instead.
 
 # Windows (run in Git Bash with the Visual Studio developer environment inherited)
-./scripts/build-windows.sh 18.6.0 x86_64-pc-windows-msvc x64-windows
-./scripts/build-windows.sh 18.6.0 aarch64-pc-windows-msvc arm64-windows
+./scripts/build-windows.sh 19.0.0 x86_64-pc-windows-msvc x64-windows
+./scripts/build-windows.sh 19.0.0 aarch64-pc-windows-msvc arm64-windows
 ```
 
 macOS and Windows builds require a host matching the target architecture. On Windows, install Visual
@@ -75,18 +75,18 @@ use a fresh temporary directory when changing versions or targets.
 On macOS and Windows, the installation includes runtime dependencies and can be tested with:
 
 ```bash
-cd postgresql-18.6.0-aarch64-apple-darwin # Use your installation directory.
-../scripts/test.sh 18.6.0
+cd postgresql-19.0.0-aarch64-apple-darwin # Use your installation directory.
+../scripts/test.sh 19.0.0
 ```
 
 Linux installations can be tested in the build image:
 
 ```bash
 docker run --rm --platform linux/amd64 \
-  --volume "$PWD/postgresql-18.6.0-x86_64-unknown-linux-gnu:/opt/test" \
+  --volume "$PWD/postgresql-19.0.0-x86_64-unknown-linux-gnu:/opt/test" \
   --volume "$PWD/scripts/test.sh:/opt/test/test.sh:ro" \
   --volume "$PWD/scripts/postgresql-versions.sh:/opt/test/postgresql-versions.sh:ro" \
-  postgresql-build:latest /bin/sh -c 'cd /opt/test && ./test.sh 18.6.0'
+  postgresql-build:latest /bin/sh -c 'cd /opt/test && ./test.sh 19.0.0'
 ```
 
 Archive creation and release uploads are handled by the GitHub Actions workflow.

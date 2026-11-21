@@ -31,4 +31,4 @@ for VERSION in $(sh "$root/scripts/postgresql-versions.sh" oldest); do
 done
 if (unset VERSION; source "$root/scripts/macos-options.sh") 2>/dev/null; then exit 1; fi
 if (VERSION=bad; source "$root/scripts/macos-options.sh") 2>/dev/null; then exit 1; fi
-echo 'macOS 14–18 option checks passed'
+echo 'macOS supported-version option checks passed'

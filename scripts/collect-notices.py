@@ -59,6 +59,8 @@ for item in data["bundled"]:
         dedication = destination / "copyright.html"
         url = "https://www.sqlite.org/copyright.html"
         subprocess.run(["curl", "--fail", "--location", "--silent", "--show-error",
+                        "--retry", "3", "--retry-all-errors", "--retry-max-time", "180",
+                        "--connect-timeout", "20", "--max-time", "60",
                         "--proto", "=https", "--proto-redir", "=https", url, "-o", str(dedication)], check=True)
         item["notice_sources"] = [{"url": url, "sha256": hashlib.sha256(dedication.read_bytes()).hexdigest()}]
         continue

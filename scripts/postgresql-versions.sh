@@ -5,7 +5,7 @@
 # CI, source validation, release verification and upstream checks share this
 # policy; the runtime test also uses it without Python or jq.
 set -eu
-versions='14.24.0 15.19.0 16.15.0 17.11.0 18.6.0'
+versions='15.20.0 16.16.0 17.12.0 18.7.0 19.0.0'
 
 validate() {
     case "$1" in
@@ -33,11 +33,11 @@ case "${1:-}" in
     eol)
         validate "${2:?Missing version}"
         case "${2%%.*}" in
-            14) echo 2026-11-12 ;;
             15) echo 2027-11-11 ;;
             16) echo 2028-11-09 ;;
             17) echo 2029-11-08 ;;
             18) echo 2030-11-14 ;;
+            19) echo 2031-11-19 ;;
             *) echo "Missing EOL date for PostgreSQL $2" >&2; exit 1 ;;
         esac
         ;;
@@ -58,7 +58,6 @@ case "${1:-}" in
         # These upstream releases fixed strchrnul detection for macOS 15.4
         # SDKs when targeting macOS 15.0. Backport the fix to older sources.
         case "${2%%.*}" in
-            14) first_fixed_minor=18 ;;
             15) first_fixed_minor=13 ;;
             16) first_fixed_minor=9 ;;
             17) first_fixed_minor=5 ;;

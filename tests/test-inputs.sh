@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-version="${1:-18.6.0}"
+version="${1:-19.0.0}"
 upstream_version="${version%.*}"
 root=$(cd "$(dirname "$0")/.." && pwd)
 temporary=$(mktemp -d)

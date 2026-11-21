@@ -111,10 +111,23 @@ jq -e '.system[0] == "Windows" and
     (.audited_files | index("lib/postgresql/plpython3.dll") != null)' \
     "$install/runtime-dependencies.json" >/dev/null
 
-# PostgreSQL 14 source builds have no PL/Python module.
-rm "$install/lib/postgresql/plpython3.dll"
+# PostgreSQL 19 imports the stable ABI forwarding DLL.
+pe_with_import "$install/lib/postgresql/plpython3.dll" PYTHON3.dll
+test "$(bash "$helper" detect "$install")" = version=3
+if WINDOWS_PYTHON_ROOT="$prefix" VCPKG_INSTALLED="$vcpkg" bash "$helper" bundle-source "$install" > "$temporary/stable-abi.log" 2>&1; then exit 1; fi
+grep -q 'Missing stable Python ABI DLL' "$temporary/stable-abi.log"
+pe_with_import "$prefix/python3.dll" python313.dll
 WINDOWS_PYTHON_ROOT="$prefix" VCPKG_INSTALLED="$vcpkg" bash "$helper" bundle-source "$install"
-jq -e '.python_input.abi == "3.13"' "$install/runtime-dependencies.json" >/dev/null
+cmp "$prefix/python3.dll" "$install/bin/python3.dll"
+jq -e '.python_input.abi == "3.13" and
+    (.audited_files | index("bin/python3.dll") != null) and
+    (.bundled | any(.file == "bin/python3.dll"))' "$install/runtime-dependencies.json" >/dev/null
+
+# Every supported source build must include PL/Python.
+mv "$install/lib/postgresql/plpython3.dll" "$temporary/plpython3.dll"
+if WINDOWS_PYTHON_ROOT="$prefix" VCPKG_INSTALLED="$vcpkg" bash "$helper" bundle-source "$install" > "$temporary/no-plpython.log" 2>&1; then exit 1; fi
+grep -q 'Expected one Python ABI' "$temporary/no-plpython.log"
+mv "$temporary/plpython3.dll" "$install/lib/postgresql/plpython3.dll"
 rm "$vcpkg/share/openssl/copyright"
 if WINDOWS_PYTHON_ROOT="$prefix" VCPKG_INSTALLED="$vcpkg" bash "$helper" bundle-source "$install" > "$temporary/notices.log" 2>&1; then exit 1; fi
 grep -q 'Missing vcpkg redistribution notices' "$temporary/notices.log"

@@ -92,8 +92,9 @@ $$'
     test "$(query 'SELECT portable_python()')" = '{"value": "1.25"}'
 fi
 if find ../lib -name 'llvmjit.*' | grep -q .; then
-    test "$(query 'SELECT pg_jit_available()')" = t
-    query 'SET jit = on; SET jit_above_cost = 0; SELECT sum(i) FROM generate_series(1, 100) i'
+    # PostgreSQL 19 disables JIT by default. Enable it in the session that probes the provider.
+    test "$(query 'SET jit = on; SELECT pg_jit_available()')" = t
+    test "$(query 'SET jit = on; SET jit_above_cost = 0; SELECT sum(i) FROM generate_series(1, 100) i')" = 5050
 fi
 
 echo "Running tests..."

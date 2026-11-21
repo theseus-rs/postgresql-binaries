@@ -35,13 +35,15 @@ windows_python_version() {
     while IFS= read -r -d '' file; do
         imports=$(windows_imports "$file") || return 1
         while IFS= read -r name; do
-            if [[ "$name" =~ ^python3([0-9]+)\.dll$ ]]; then
+            if [ "$name" = python3.dll ]; then
+                versions="${versions}3"$'\n'
+            elif [[ "$name" =~ ^python3([0-9]+)\.dll$ ]]; then
                 versions="$versions$(printf '3.%s\n' "${BASH_REMATCH[1]}")"$'\n'
             fi
         done <<< "$imports"
     done < <(find "$root/lib" -type f -iname '*plpython*.dll' -print0)
     versions=$(printf '%s' "$versions" | sed '/^$/d' | sort -u)
-    [[ "$versions" =~ ^3\.[0-9]+$ ]] || runtime_die "Expected one Python ABI, found: $versions"
+    [[ "$versions" =~ ^3(\.[0-9]+)?$ ]] || runtime_die "Expected one Python ABI, found: $versions"
     printf '%s\n' "$versions"
 }
 
@@ -84,14 +86,14 @@ windows_bundle() {
     if command -v cygpath >/dev/null 2>&1; then prefix=$(cygpath -u "$prefix"); fi
     prefix=$(cd "$prefix" && pwd -P)
     version=$(awk '$1 == "#define" && $2 == "PY_VERSION" { gsub(/"/, "", $3); print $3 }' "$prefix/include/patchlevel.h")
-    if [ "$provider" = source ] && [ -z "$(find "$root/lib" -type f -iname '*plpython*.dll' -print -quit)" ]; then
-        # PostgreSQL 14 source builds disable PL/Python. Keep the selected
-        # interpreter's runtime without requiring a PL/Python import to inspect.
-        expected=${version%.*}
-    else
-        expected=$(windows_python_version "$root")
-    fi
+    expected=$(windows_python_version "$root")
     [[ "$version" = "$expected."* ]] || runtime_die 'Selected Python does not match imported DLL'
+    if [ "$expected" = 3 ]; then
+        # PostgreSQL 19 uses the stable ABI. Bundle its forwarding DLL and the
+        # selected interpreter's versioned runtime plus matching stdlib.
+        [ -f "$prefix/python3.dll" ] || runtime_die 'Missing stable Python ABI DLL'
+        expected=${version%.*}
+    fi
     if [ "$provider" = source ]; then input_source='PostgreSQL source build and vcpkg'; fi
     [ -f "$prefix/python${expected//./}.dll" ] || runtime_die 'Missing matching Python runtime DLL'
     destination="$root/bin"

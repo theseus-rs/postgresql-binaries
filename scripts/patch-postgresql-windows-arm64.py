@@ -125,7 +125,7 @@ spin_delay(void)
         "  if cc.links(prog, name: '__crc32cb, __crc32ch, __crc32cw, and __crc32cd without -march=armv8-a+crc',\n"
         "      args: test_c_args)",
         "  # Vendor-supported versions of Windows for AArch64 require at least ARMv8.1,\n"
-        "  # which is where CRC extension support became mandatory. Thus, use it\n"
+        "  # which is where CRC extension support became mandatory.  Thus, use it\n"
         "  # unconditionally on MSVC/AArch64.\n"
         "  if (host_cpu == 'aarch64' and cc.get_id() == 'msvc') or \\\n"
         "        cc.links(prog, name: '__crc32cb, __crc32ch, __crc32cw, and __crc32cd without -march=armv8-a+crc',\n"
